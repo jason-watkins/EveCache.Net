@@ -40,7 +40,7 @@ namespace EveCache
         private ulong _OrderID;
         private uint _VolEntered;
         private uint _MinVolume;
-        private bool _Bid;
+        private bool _IsBid;
         private ulong _Issued;
         private uint _Duration;
         private uint _StationID;
@@ -51,55 +51,72 @@ namespace EveCache
 		#endregion Fields
 
 		#region Properties
-		public ulong Price { get { return _Price; } set { _Price = value; } }
-		public double VolRemaining { get { return _VolRemaining; } set { _VolRemaining = value; } }
-		public uint Range { get { return _Range; } set { _Range = value; } }
-		
-		//void setOrderID(unsigned long long v) { _orderID = v; }
-		//void setVolEntered(unsigned int v) { _volEntered = v; }
-		//void setMinVolume(unsigned int v) { _minVolume = v; }
-		//void setBid(bool b) { _bid = b; }
-		//void setIssued(unsigned long long v) { _issued = v; }
-		//void setDuration(unsigned int v) { _duration = v; }
-		//void setStationID(unsigned int v) { _stationID = v; }
-		//void setRegionID(unsigned int v) { _regionID = v; }
-		//void setSolarSystemID(unsigned int v) { _solarSystemID = v; }
-		//void setJumps(unsigned int v) { _jumps = v; }
-		//void setType(unsigned int v) { _type = v; }
-	
-		//unsigned long long orderID() const { return _orderID; }
-		//unsigned int volEntered() const { return _volEntered; }
-		//unsigned int minVolume() const { return _minVolume; }
-		//bool isBid() const  { return _bid; }
-		//unsigned long long issued() const  { return _issued; }
-		//unsigned int duration() const  { return _duration; }
-		//unsigned int stationID() const  { return _stationID; }
-		//unsigned int regionID() const { return _regionID; }
-		//unsigned int solarSystemID() const  { return _solarSystemID; }
-		//unsigned int jumps() const  { return _jumps; }
-		//unsigned int type() const { return _type; }
+		public virtual ulong Price { get { return _Price; } set { _Price = value; } }
+		public virtual double VolRemaining { get { return _VolRemaining; } set { _VolRemaining = value; } }
+		public virtual uint Range { get { return _Range; } set { _Range = value; } }
+		public virtual ulong OrderID { get { return _OrderID; } set { _OrderID = value; } }
+		public virtual uint VolEntered { get { return _VolEntered; } set { _VolEntered = value; } }
+		public virtual uint MinVolume { get { return _MinVolume; } set { _MinVolume = value; } }
+		public virtual bool IsBid { get { return _IsBid; } set { _IsBid = value; } }
+		public virtual ulong Issued { get { return _Issued; } set { _Issued = value; } }
+		public virtual uint Duration { get { return _Duration; } set { _Duration = value; } }
+		public virtual uint StationID { get { return _StationID; } set { _StationID = value; } }
+		public virtual uint SolarSystemID { get { return _SolarSystemID; } set { _SolarSystemID = value; } }
+		public virtual uint RegionID { get { return _RegionID; } set { _RegionID = value; } }
+		public virtual uint Jumps { get { return _Jumps; } set { _Jumps = value; } }
+		public virtual uint Type { get { return _Type; } set { _Type = value; } }
 		#endregion Properties
 
 		#region Constructors
 		public MarketOrder()
 		{
-
+			Price = 0;
+			VolRemaining = 0;
+			Range = 0;
+			OrderID = 0;
+			VolEntered = 0;
+			MinVolume = 0;
+			IsBid = false;
+			Issued = 0;
+			Duration = 0;
+			StationID = 0;
+			SolarSystemID = 0;
+			RegionID = 0;
+			Jumps = 0;
+			Type = 0;
 		}
 		#endregion Constructors
 
 		#region Methods
+		public virtual string ToCsv()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append(String.Format("{0:0.00}", Price / 10000D));
 
+			sb.Append("," + String.Format("{0:0.0}", VolRemaining));
+
+			sb.Append("," + Type);
+			sb.Append("," + Range);
+			sb.Append("," + OrderID);
+			sb.Append("," + VolEntered);
+			sb.Append("," + MinVolume);
+
+			if (IsBid)
+				sb.Append("True");
+			else
+				sb.Append("False");
+
+			DateTime dt = new DateTime((long)Issued);
+			string dtString = String.Format("0:YYYY-MM-dd HH:mm:ss", dt);
+
+			sb.Append("," + dt + ".000");
+			sb.Append("," + Duration);
+			sb.Append("," + StationID);
+			sb.Append("," + RegionID);
+			sb.Append("," + SolarSystemID);
+			sb.Append("," + Jumps);
+			return sb.ToString();
+		}
 		#endregion Methods
-			//    MarketOrder() : _price(0), _volRemaining(0), _range(0), _orderID(0), _volEntered(0), _minVolume(0), _bid(0), _issued(0), 
-			//_duration(0), _stationID(0), _regionID(0), _solarSystemID(0), _jumps(0), _type(0) {}
-
-        /**
-         * Utility
-         */
-
-        /**
-         * Return this item as a standard CSV file export line
-         */
-        //std::string toCsv() const;
 	}
 }

@@ -34,18 +34,57 @@ namespace EveCache
 	public class MarketList
 	{
 		#region Fields
+		private List<MarketOrder> _BuyOrders;
+        private int _Region;
+		private List<MarketOrder> _SellOrders;
+		private int _Type;
+        private ulong _TimeStamp;
 		#endregion Fields
 
 		#region Properties
-
+		public virtual List<MarketOrder> BuyOrders { get { return _BuyOrders; } private set { _BuyOrders = value; } }
+		public int Region { get { return _Region; } set { _Region = value; } }
+		public virtual List<MarketOrder> SellOrders { get { return _SellOrders; } private set { _SellOrders = value; } }
+		public int Type { get { return _Type; } set { _Type = value; } }
+		public ulong TimeStamp { get { return _TimeStamp; } set { _TimeStamp = value; } }
 		#endregion Properties
 
 		#region Constructors
+		public MarketList(int type, int region)
+			: this()
+		{
+			Region = region;
+			Type = type;
+		}
 
+		public MarketList()
+		{
+			BuyOrders = new List<MarketOrder>();
+			SellOrders = new List<MarketOrder>();
+
+			Region = 0;
+			Type = 0;
+			TimeStamp = 0;
+		}
+
+		public MarketList(MarketList rhs)
+		{
+			BuyOrders = rhs.BuyOrders;
+			Region = rhs.Region;
+			SellOrders = rhs.SellOrders;
+			Type = rhs.Type;
+			TimeStamp = rhs.TimeStamp;
+		}
 		#endregion Constructors
 
 		#region Methods
-
+		public void AddOrder(MarketOrder order)
+		{
+			if (order.IsBid)
+				BuyOrders.Add(order);
+			else
+				SellOrders.Add(order);
+		}
 		#endregion Methods
 	}
 }
