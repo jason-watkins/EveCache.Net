@@ -1,11 +1,11 @@
 ﻿namespace EveCache
 {
-	enum EStreamCode
+	public enum EStreamCode : byte
 	{
         EStreamStart = 0x7e,
         ENone = 0x01, // Python None type
         EString = 0x2, // Another type of string, also ids
-        ELongLong = 0x3, // 64 bit value?
+        ELong = 0x3, // 64 bit value?
         EInteger = 0x04, // 4 byte, little endian?
         EShort = 0x05, // 2 byte
         EByte = 0x6, // i think
@@ -37,7 +37,7 @@
         EEmptyString = 0x28, // empty
         EUnicodeString2 = 0x29,
         ECompressedRow = 0x2a, // the datatype from hell, a RLEish compressed row
-        ESubstream = 0x2b, // substream - len bytes followed by 0x7e
+        ESubstream = 0x2b, // substream - length bytes followed by 0x7e
         E2Tuple = 0x2c, // a tuple of 2 objects
         EString2 = 0x2e, // stringtastic
         ESizedInt = 0x2f, // when you can't decide ahead of time how long to make the integer...

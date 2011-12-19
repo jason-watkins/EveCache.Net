@@ -41,7 +41,7 @@ namespace EveCache
 
 		#region Properties
 		public virtual MarketList List { get { return _List; } private set { _List = value; } }
-		private virtual SNode Stream { get { return _Stream; } set { _Stream = value; } }
+		protected virtual SNode Stream { get { return _Stream; } set { _Stream = value; } }
 		private bool Valid { get { return _Valid; } set { _Valid = value; } }
 		#endregion Properties
 
@@ -70,18 +70,18 @@ namespace EveCache
 
 		private void InitWithFile(string fileName)
 		{
-			CacheFile cf = new CacheFile(fileName);
-			if (!cf.ReadFile())
-				throw new ParseException("Can't open file " + fileName);
+			//CacheFile cf = new CacheFile(fileName);
+			//if (!cf.ReadFile())
+			//    throw new ParseException("Can't open file " + fileName);
 
-			CacheFile_Iterator i = cf.Begin();
-			Parser parser = new Parser(i);
-			parser.Parse();
-			SNode snode = parser.Streams[0];
-			Stream = snode;
-			Parse();
-			Stream = null;
-			Valid = true;
+			//CacheFile_Iterator i = cf.Begin();
+			//Parser parser = new Parser(i);
+			//parser.Parse();
+			//SNode snode = parser.Streams[0];
+			//Stream = snode;
+			//Parse();
+			//Stream = null;
+			//Valid = true;
 		}
 
         private void Parse(SNode nest);
@@ -115,7 +115,7 @@ namespace EveCache
 //        if (key != 0) {
 //            typeKey = key->id();
 //        } else {
-//            if (ident->name() == "issueDate") {
+//            if (ident->value() == "issueDate") {
 //                typeKey = 131;
 //            } else {
 //                std::cerr << "Can't parse - giving up" << std::endl;

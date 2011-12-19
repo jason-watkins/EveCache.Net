@@ -67,7 +67,7 @@ namespace EveCache
 		#endregion Constructors
 
 		#region Methods
-		public virtual static bool operator ==(CacheFile_Iterator lhs, CacheFile_Iterator rhs)
+		public static bool operator ==(CacheFile_Iterator lhs, CacheFile_Iterator rhs)
 		{
 			if (lhs.Position == rhs.Position && lhs.CacheFile == rhs.CacheFile)
 				return true;
@@ -75,20 +75,26 @@ namespace EveCache
 				return false;
 		}
 
-		public virtual static bool operator !=(CacheFile_Iterator lhs, CacheFile_Iterator rhs)
+		public static bool operator !=(CacheFile_Iterator lhs, CacheFile_Iterator rhs)
 		{
 			return !(lhs == rhs);
 		}
 
-		public virtual static CacheFile_Iterator operator +(CacheFile_Iterator lhs, int len)
+		public static CacheFile_Iterator operator +(CacheFile_Iterator lhs, int len)
 		{
 			lhs.Advance(len);
 			return lhs;
 		}
 
-		public virtual char PeekChar()
+		public bool Advance(int len)
 		{
-			return (char)CacheFile.ByteAt(Position);
+			Position += len;
+			return AtEnd;
+		}
+
+		public virtual byte PeekChar()
+		{
+			return CacheFile.ByteAt(Position);
 		}
 
 		public virtual double PeekDouble()
@@ -126,9 +132,9 @@ namespace EveCache
 			return Encoding.ASCII.GetString(bytes);
 		}
 
-		public char ReadChar()
+		public byte ReadChar()
 		{
-			char r = PeekChar();
+			byte r = PeekChar();
 			Advance(1);
 			return r;
 		}
@@ -179,12 +185,6 @@ namespace EveCache
 		public void Seek(int pos)
 		{
 			Position = pos;
-		}
-
-		public bool Advance(int len)
-		{
-			Position += len;
-			return AtEnd;
 		}
 		#endregion Methods
 	}

@@ -14,63 +14,83 @@
 
 		#region Properties
 		public virtual List<SNode> Members { get { return _Members; } protected set { _Members = value; } }
-		public EStreamCode Type { get { return _Type; } set { _Type = value; } }
+		public virtual EStreamCode Type { get { return _Type; } set { _Type = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SNode(EStreamCode t);
-		public SNode(SNode node);
+		public SNode(EStreamCode t)
+		{
+			Members = new List<SNode>();
+			Type = t;
+		}
+
+		public SNode(SNode source)
+		{
+			Members = new List<SNode>();
+			foreach (SNode node in source.Members)
+				Members.Add(node.Clone());
+
+			Type = source.Type;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual void AddMember(SNode node);
+		public virtual void AddMember(SNode node)
+		{
+			Members.Add(node);
+		}
 
-		public virtual SNode Clone();
+		public virtual SNode Clone()
+		{
+			return new SNode(this);
+		}
 
-		public virtual string Repl();
+		public virtual string Repl()
+		{
+			return "<SNode type " + String.Format("0:x2", Type) + ">";
+		}
 		#endregion Methods
 	}
 
 	public class SStreamNode : SNode
 	{
-		#region Fields
-		#endregion Fields
-
-		#region Properties
-
-		#endregion Properties
-
 		#region Constructors
-		public SStreamNode();
+		public SStreamNode() : base(EStreamCode.EStreamStart) { }
 
-		public SStreamNode(EStreamCode t);
+		public SStreamNode(EStreamCode t) : base(t) { }
 
-		SStreamNode(SStreamNode rhs);
+		SStreamNode(SStreamNode source) : base(source) { }
 		#endregion Constructors
 
 		#region Methods
-		public virtual SStreamNode Clone();
+		public override SStreamNode Clone()
+		{
+			return new SStreamNode(this);
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return " <SStreamNode> ";
+		}
 		#endregion Methods
 	}
 
 	public class SDBHeader : SNode
 	{
-		#region Fields
-		#endregion Fields
-
-		#region Properties
-		#endregion Properties
-
 		#region Constructors
-		public SDBHeader();
+		public SDBHeader() : base(EStreamCode.ECompressedRow) { }
 		#endregion Constructors
 
 		#region Methods
-		public virtual SDBHeader Clone();
+		public override SDBHeader Clone()
+		{
+			return new SDBHeader();
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return "<SDBHeader>";
+		}
 		#endregion Methods
 	}
 
@@ -81,21 +101,39 @@
 		#endregion Fields
 
 		#region Properties
-		protected uint GivenLength { get { return _GivenLength; } private set { _GivenLength = value; } }
+		public virtual uint GivenLength { get { return _GivenLength; } protected set { _GivenLength = value; } }
 		#endregion Properties
 
 		#region Constructors
-		STuple(uint len);
+		public STuple(uint len) : base(EStreamCode.ETuple)
+		{
+			GivenLength = len;
+		}
 
-		STuple(STuple rhs);
+		public STuple(STuple source) : base(source)
+		{
+			GivenLength = source.GivenLength;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual void AddMember(SNode node);
+		public override void AddMember(SNode node)
+		{
+			if (!(Members.Count < GivenLength))
+				throw new SystemException();
 
-		public virtual STuple Clone();
+			Members.Add(node);
+		}
 
-		public virtual string Repl();
+		public override STuple Clone()
+		{
+			return new STuple(this);
+		}
+
+		public override string Repl()
+		{
+			return " <STuple> ";
+		}
 		#endregion Methods
 	}
 
@@ -106,42 +144,72 @@
 		#endregion Fields
 
 		#region Properties
-		protected uint GivenLength { get { return _GivenLength; } private set { _GivenLength = value; } }
+		public uint GivenLength { get { return _GivenLength; } protected set { _GivenLength = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SDict(uint len);
+		public SDict(uint length) : base(EStreamCode.EDict)
+		{
+			GivenLength = length;
+		}
 
-		public SDict(SDict rhs);
+		public SDict(SDict source) : base(source)
+		{
+			GivenLength = source.GivenLength;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual void AddMember(SNode node);
+		public override void AddMember(SNode node)
+		{
+			if (!(Members.Count < GivenLength))
+				throw new SystemException();
 
-		public virtual SDict Clone();
+			Members.Add(node);
+		}
 
-		public virtual SNode GetByName(string target); 
+		public override SDict Clone()
+		{
+			return new SDict(this);
+		}
 
-		public virtual string Repl();
+		public override SNode GetByName(string target)
+		{
+			if (Members.Count < 2 || (Members.Count & 1) > 0)
+				return null;
+
+			for (int i = 1; i < Members.Count; i+=2)
+			{
+				if (Members[i] is SIdent && ((SIdent)Members[i]).Name == target)
+					return Members[i - 1];
+			}
+
+			return null;
+		}
+
+		public override string Repl()
+		{
+			return " <SDict> ";
+		}
 		#endregion Methods
 	}
-
+	
 	public class SNone : SNode
 	{
-		#region Fields
-		#endregion Fields
-
-		#region Properties
-		#endregion Properties
-
 		#region Constructors
-		public SNone();
+		public SNone() : base(EStreamCode.ENone) { }
 		#endregion Constructors
 
 		#region Methods
-		public virtual SNone Clone();
+		public override SNone Clone()
+		{
+			return new SNone();
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return " <NONE> ";
+		}
 		#endregion Methods
 	}
 
@@ -152,19 +220,35 @@
 		#endregion Fields
 
 		#region Properties
-		protected byte ID { get { return _ID; } private set { _ID = value; } }
+		public byte ID { get { return _ID; } protected set { _ID = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SMarker(byte id);
+		public SMarker(byte id) : base(EStreamCode.EMarker)
+		{
+			ID = id;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SMarker Clone();
+		public override SMarker Clone()
+		{
+			return new SMarker(this.ID);
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return " <SMarker ID: " + ID + " '" + ToString() + "' > ";
+		}
 
-		public virtual string String();
+		public override string ToString()
+		{
+			string name = ColumnLookup.LookupName(ID);
+			if (name == string.Empty)
+				return "UNKNOWN:" + ID;
+			else
+				return name;
+		}
 		#endregion Methods
 	}
 
@@ -175,40 +259,61 @@
 		#endregion Fields
 
 		#region Properties
-		protected string Name { get { return _Name; } private set { _Name = value; } }
+		public string Name { get { return _Name; } protected set { _Name = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SIdent(string m);
+		public SIdent(string name) : base(EStreamCode.EIdent)
+		{
+			Name = name;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SIdent Clone();
+		public virtual SIdent Clone()
+		{
+			return new SIdent(Name);
+		}
 
-		public virtual string Repl();
+		public virtual string Repl()
+		{
+			return " <SIdent '" + Name + "'> ";
+		}
 		#endregion Methods
 	}
 
 	public class SString : SNode
 	{
 		#region Fields
-		private string _Name;
+		private string _Value;
 		#endregion Fields
 
 		#region Properties
-		protected string Name { get { return _Name; } private set { _Name = value; } }
+		public string Value { get { return _Value; } protected set { _Value = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SString(string m);
+		public SString(string value) : base(EStreamCode.EString)
+		{
+			Value = value;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SString Clone();
+		public override SString Clone()
+		{
+			return new SString(Value);
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return " <SString '" + Value + "'> ";
+		}
 
-		public virtual string String();
+		public override string ToString()
+		{
+			return Value;
+		}
 		#endregion Methods
 	}
 
@@ -219,17 +324,26 @@
 		#endregion Fields
 
 		#region Properties
-		protected int Value { get { return _Value; } private set { _Value = value; } }
+		public int Value { get { return _Value; } private set { _Value = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SInt(int val);
+		public SInt(int value) : base(EStreamCode.EInteger)
+		{
+			Value = Value;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SInt Clone();
+		public override SInt Clone()
+		{
+			return new SInt(Value);
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return " <Sint '" + Value + "'> ";
+		}
 		#endregion Methods
 	}
 
@@ -240,19 +354,26 @@
 		#endregion Fields
 
 		#region Properties
-		protected double Value { get { return _Value; } private set { _Value = value; } }
+		public double Value { get { return _Value; } private set { _Value = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SReal(double val);
+		public SReal(double value) : base(EStreamCode.EReal)
+		{
+			Value = value;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SReal Clone();
+		public override SReal Clone()
+		{
+			return new SReal(Value);
+		}
 
-		public virtual string Repl();
-
-		public virtual string String();
+		public override string Repl()
+		{
+			return " <SReal '" + Value + "'> ";
+		}
 		#endregion Methods
 	}
 
@@ -263,42 +384,67 @@
 		#endregion Fields
 
 		#region Properties
-		protected long Value { get { return _Value; } private set { _Value = value; } }
+		public long Value { get { return _Value; } private set { _Value = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SLong(double val);
+		public SLong(long value) : base(EStreamCode.ELong)
+		{
+			Value = value;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SLong Clone();
+		public override SLong Clone()
+		{
+			return new SLong(Value);
+		}
 
-		public virtual string Repl();
-
-		public virtual string String();
+		public override string Repl()
+		{
+			return " <SLongLong '" + Value + "'> ";
+		}
 		#endregion Methods
 	}
 
 	public class SObject : SNode
 	{
-		#region Fields
-		#endregion Fields
-
 		#region Properties
-		public string Name { get { return ""; } }
+		public string Name
+		{ 
+			get 
+			{
+				SNode current = this;
+				while (current.Members.Count > 0)
+					current = current.Members[0];
+
+				SString str = current as SString;
+
+				if (str != null)
+					return str.ToString();
+
+				return string.Empty;
+			} 
+		}
 		#endregion Properties
 
 		#region Constructors
-		public SObject();
+		public SObject() : base(EStreamCode.EObject) { }
 		#endregion Constructors
 
 		#region Methods
-		public virtual SObject Clone();
+		public override SObject Clone()
+		{
+			return new SObject();
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return " <SObject '" + Name + "' " + this + "> ";
+		}
 		#endregion Methods
 	}
-
+	
 	public class SSubstream : SNode
 	{
 		#region Fields
@@ -306,20 +452,29 @@
 		#endregion Fields
 
 		#region Properties
-		protected int Length { get { return _Length; } private set { _Length = value; } }
+		private int Length { get { return _Length; } set { _Length = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public SSubstream(int length);
+		public SSubstream(int length) : base(EStreamCode.ESubstream)
+		{
+			Length = length;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SSubstream Clone();
+		public override SSubstream Clone()
+		{
+			return new SSubstream(Length);
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return " <SSubStream> ";
+		}
 		#endregion Methods
 	}
-
+	
 	public class SDBRow : SNode
 	{
 		#region Fields
@@ -335,32 +490,53 @@
 		#endregion Properties
 
 		#region Constructors
-		public SDBRow(int magic, List<byte> data);
+		public SDBRow(int magic, List<byte> data) : base(EStreamCode.ECompressedRow)
+		{
+			Data = data;
+			ID = magic;
+			IsLast = false;
+		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual SDBRow Clone();
+		public override SDBRow Clone()
+		{
+			return new SDBRow(ID, Data);
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append(" <DBRow ");
+
+			for (int i = 0; i < Data.Count; i++)
+				sb.Append(String.Format("0:x2", Data[i]));
+
+			if (IsLast)
+				sb.Append(" LAST");
+
+			sb.Append(">");
+			return sb.ToString();
+		}
 		#endregion Methods
 	}
-
+	
 	public class SDBRecords : SNode
 	{
-		#region Fields
-		#endregion Fields
-
-		#region Properties
-		#endregion Properties
-
 		#region Constructors
-		public SDBRecords();
+		public SDBRecords() : base(EStreamCode.ECompressedRow) { }
 		#endregion Constructors
 
 		#region Methods
-		public virtual SMarker Clone();
+		public override SDBRecords Clone()
+		{
+			return new SDBRecords();
+		}
 
-		public virtual string Repl();
+		public override string Repl()
+		{
+			return string.Empty;
+		}
 		#endregion Methods
 	}
 }

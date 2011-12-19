@@ -35,14 +35,17 @@ namespace EveCache
 	public class CacheFile
 	{
 		#region Fields
-        private byte[] _Contents;
+		private byte[] _Contents;
+		private string _FileName;
         private int _Length;
         private bool _Valid;
-        private string _FileName;
 		#endregion Fields
 
 		#region Properties
+		public virtual CacheFile_Iterator Begin { get { return new CacheFile_Iterator(this, Length, Length); } }
 		private byte[] Contents { get { return _Contents; } set { _Contents = value; } }
+		public virtual CacheFile_Iterator End { get { return new CacheFile_Iterator(this, 0, Length); } }
+		private string FileName { get { return _FileName; } set { _FileName = value; } }
 		public int Length
 		{
 			get
@@ -55,7 +58,6 @@ namespace EveCache
 			private set { _Length = value; } 
 		}
 		private bool Valid { get { return _Valid; } set { _Valid = value; } }
-		private string FileName { get { return _FileName; } set { _FileName = value; } }
 		#endregion Properties
 
 		#region Constructors
@@ -96,6 +98,19 @@ namespace EveCache
 		#endregion Constructors
 
 		#region Methods
+		public virtual byte ByteAt(int pos)
+		{
+			if (pos >= 0 && pos < Length)
+				return Contents[pos];
+			throw new EndOfFileException();
+		}
+
+		public virtual void PeekAt(byte[] data, int at, int len)
+		{
+			// Broken for big endian...
+			Array.Copy(Contents, at, data, 0, len);
+		}
+
         public bool ReadFile()
 		{
 			FileStream file = File.Open(FileName, FileMode.Open, FileAccess.Read);
@@ -109,29 +124,6 @@ namespace EveCache
 			Length = (int)size;
 	
 			return Valid;
-		}
-
-        public virtual CacheFile_Iterator End()
-		{
-			return new CacheFile_Iterator(this, 0, Length);
-		}
-
-        public virtual CacheFile_Iterator Begin()
-		{
-			return new CacheFile_Iterator(this, Length, Length);
-		}
-
-		public virtual byte ByteAt(int pos)
-		{
-			if (pos >= 0 && pos < Length)
-				return Contents[pos];
-			throw new EndOfFileException();
-		}
-
-		public virtual void PeekAt(byte[] data, int at, int len)
-		{
-			// Broken for big endian...
-			Array.Copy(Contents, at, data, 0, len);
 		}
 		#endregion Methods
 	}
