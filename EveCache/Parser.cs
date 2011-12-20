@@ -2,8 +2,8 @@
 {
 	using System;
 	using System.Collections.Generic;
-	using System.Linq;
 	using System.Text;
+
 	public class Parser
 	{
 		#region Fields
@@ -95,8 +95,8 @@
 			rle_unpack(olddata, olddata.Length, newdata);
 			SNode body = new SDBRow(17, newdata);
 
-			CacheFile cf = new CacheFile(newdata);
-			CacheFileReader blob = cf.Begin;
+			CacheFile cf = new CacheFile(newdata.ToArray());
+			CacheFileReader blob = cf.Reader;
 
 			SDict dict = new SDict(999999); // TODO: need dynamic sized dict
 			int step = 1;
@@ -501,7 +501,7 @@
 
 		protected void ShareSkip()
 		{
-			Reader.Advance((int)(ShareCount * 4));
+			Reader.Seek((int)(ShareCount * 4));
 		}
 		#endregion Methods
 	}

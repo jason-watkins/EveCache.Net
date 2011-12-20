@@ -1,52 +1,48 @@
 ﻿#region License
-///<license>
-/// EveCache.Net - EVE Cache File Reader Library
-/// Copyright (C) 2011 Jason Watkins
-/// 
-/// Based on libevecache
-/// Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
-/// http://dev.eve-central.com/libevecache/
-/// http://gitorious.org/libevecache
-/// 
-/// This library is free software; you can redistribute it and/or
-/// modify it under the terms of the GNU General Public
-/// License as published by the Free Software Foundation; either
-/// version 2 of the License, or (at your option) any later version.
-/// 
-/// This library is distributed in the hope that it will be useful,
-/// but WITHOUT ANY WARRANTY; without even the implied warranty of
-/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-/// General Public License for more details.
-/// 
-/// You should have received a copy of the GNU General Public
-/// License along with this library; if not, write to the Free Software
-/// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-///</license>
+/* EveCache.Net - EVE Cache File Reader Library
+ * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
+ *
+ * Based on libevecache
+ * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
+ * http: * dev.eve-central.com/libevecache/
+ * http: * gitorious.org/libevecache
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 #endregion
 
 namespace EveCache
 {
 	using System;
-	using System.Collections.Generic;
-	using System.Linq;
-	using System.Text;
 
 	public class MarketParser
 	{
 		#region Fields
 		private MarketList _List;
-		private List<SNode> _Stream;
+		private SNodeReader _Stream;
 		private bool _Valid;
 		#endregion Fields
 
 		#region Properties
 		public virtual MarketList List { get { return _List; } private set { _List = value; } }
-		protected virtual List<SNode> Stream { get { return _Stream; } set { _Stream = value; } }
+		protected virtual SNodeReader Stream { get { return _Stream; } set { _Stream = value; } }
 		private bool Valid { get { return _Valid; } set { _Valid = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public MarketParser(List<SNode> stream)
+		public MarketParser(SNodeReader stream)
 		{
 			Stream = stream;
 			Valid = false;
@@ -73,14 +69,14 @@ namespace EveCache
 
 			/* Todo: fixed offsets = bad :) */
 			/* Step 1: Determine if this is a market order file */
-			if (Stream[0].Members.Count < 1)
+			if (Stream[0].Members.Length < 1)
 				throw new ParseException("Not a valid file");
 
 			SNode baseNode = Stream[0].Members[0];
 
-			if (baseNode.Members.Count < 1)
+			if (baseNode.Members.Length < 1)
 				throw new ParseException("Not a valid orders file");
-			if (baseNode.Members[0].Members.Count < 2)
+			if (baseNode.Members[0].Members.Length < 2)
 				throw new ParseException("Not a valid orders file");
 
 			SIdent id = baseNode.Members[0].Members[1] as SIdent;
@@ -107,7 +103,7 @@ namespace EveCache
 				throw new ParseException("Can't read file timestamp");
 
 			Console.WriteLine("TS: " + time.Value);
-			List.TimeStamp = (ulong)time.Value;
+			List.TimeStamp = new DateTime(time.Value);
 
 			SNode obj = baseNode.Members[1].Members[0];
 			if (obj == null)
@@ -122,11 +118,11 @@ namespace EveCache
 			if (!cf.ReadFile())
 				throw new ParseException("Can't open file " + fileName);
 
-			CacheFileReader i = cf.Begin;
-			Parser parser = new Parser(i);
+			CacheFileReader cfReader = cf.Reader;
+			Parser parser = new Parser(cfReader);
 			parser.Parse();
-			SNode snode = parser.Streams[0];
-			Stream = snode;
+			SNode sNode = parser.Streams[0];
+			Stream = sNode.Members;
 			Parse();
 			Stream = null;
 			Valid = true;
@@ -134,19 +130,16 @@ namespace EveCache
 
 		private void Parse(SNode node)
 		{
-			if (node.Members.Count > 0)
+			if (node.Members.Length > 0)
 			{
-				LinkedListNode<SNode> i = node.Members.First;
-				for (; i != node.Members.Last; i = i.Next)
+				SNodeReader members = node.Members;
+				for (SNode n = members.Begin; n != members.End; n = members.Next)
 				{
-					SDBRow dbrow = i.Value as SDBRow;
+					SDBRow dbrow = n as SDBRow;
 					if (dbrow != null)
-					{
-						i = i.Next;
-						ParseDbRow(i.Value);
-					}
+						ParseDbRow(members.Next);
 					else
-						Parse(i.Value);
+						Parse(n);
 				}
 			}
 		}
@@ -155,13 +148,13 @@ namespace EveCache
 		{
 			MarketOrder order = new MarketOrder();
 
-			LinkedListNode<SNode> i = node.Members.First;
-			for (; i != node.Members.Last; i = i.Next)
+			SNodeReader members = node.Members;
+			for (SNode i = members.Begin; i != members.End; i = members.Next)
 			{
-				SNode value = i.Value;
-				i = i.Next;
-				SMarker key = i.Value as SMarker;
-				SIdent ident = i.Value as SIdent;
+				SNode value = i;
+				i = members.Next;
+				SMarker key = i as SMarker;
+				SIdent ident = i as SIdent;
 
 				int typeKey = -1;
 

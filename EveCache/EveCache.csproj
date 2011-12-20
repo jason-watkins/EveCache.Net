@@ -46,6 +46,7 @@
     <Compile Include="MarketList.cs" />
     <Compile Include="MarketOrder.cs" />
     <Compile Include="MarketParser.cs" />
+    <Compile Include="SNodeReader.cs" />
     <Compile Include="ParseException.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

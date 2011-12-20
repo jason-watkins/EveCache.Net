@@ -2,31 +2,31 @@
 {
 	using System;
 	using System.Collections.Generic;
-	using System.Linq;
+	using System.IO;
 	using System.Text;
 
 	public class SNode
 	{
 		#region Fields
-		private List<SNode> _Members;
+		private SNodeReader _Members;
 		private EStreamCode _Type;
 		#endregion Fields
 
 		#region Properties
-		public virtual List<SNode> Members { get { return _Members; } protected set { _Members = value; } }
+		public virtual SNodeReader Members { get { return _Members; } protected set { _Members = value; } }
 		public virtual EStreamCode Type { get { return _Type; } set { _Type = value; } }
 		#endregion Properties
 
 		#region Constructors
 		public SNode(EStreamCode t)
 		{
-			Members = new List<SNode>();
+			Members = new SNodeReader();
 			Type = t;
 		}
 
 		public SNode(SNode source)
 		{
-			Members = new List<SNode>();
+			Members = new SNodeReader();
 			foreach (SNode node in source.Members)
 				Members.Add(node.Clone());
 
@@ -63,7 +63,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SStreamNode Clone()
+		public override SNode Clone()
 		{
 			return new SStreamNode(this);
 		}
@@ -82,7 +82,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SDBHeader Clone()
+		public override SNode Clone()
 		{
 			return new SDBHeader();
 		}
@@ -119,13 +119,13 @@
 		#region Methods
 		public override void AddMember(SNode node)
 		{
-			if (!(Members.Count < GivenLength))
+			if (!(Members.Length < GivenLength))
 				throw new SystemException();
 
 			Members.Add(node);
 		}
 
-		public override STuple Clone()
+		public override SNode Clone()
 		{
 			return new STuple(this);
 		}
@@ -162,28 +162,31 @@
 		#region Methods
 		public override void AddMember(SNode node)
 		{
-			if (!(Members.Count < GivenLength))
+			if (!(Members.Length < GivenLength))
 				throw new SystemException();
 
 			Members.Add(node);
 		}
 
-		public override SDict Clone()
+		public override SNode Clone()
 		{
 			return new SDict(this);
 		}
 
-		public override SNode GetByName(string target)
+		public virtual SNode GetByName(string target)
 		{
-			if (Members.Count < 2 || (Members.Count & 1) > 0)
+			if (Members.Length < 2 || (Members.Length & 1) > 0)
 				return null;
 
-			LinkedList<SNode> linkedMembers = new LinkedList<SNode>(Members);
-			LinkedListNode<SNode> i = linkedMembers.First.Next;
-			for (; i.Next != linkedMembers.Last; i = i.Next.Next)
+			Members.Seek(1, SeekOrigin.Begin);
+			SNode n = Members.Current;
+			while (n != Members.End)
 			{
-				if (i.Value is SIdent && ((SIdent)i.Value).Value == target)
-					return i.Previous.Value;
+				if (n is SIdent && ((SIdent)n).Value == target)
+					return Members.Previous;
+
+				Members.Seek(2);
+				n = Members.Current;
 			}
 
 			return null;
@@ -203,7 +206,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SNone Clone()
+		public override SNode Clone()
 		{
 			return new SNone();
 		}
@@ -233,7 +236,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SMarker Clone()
+		public override SNode Clone()
 		{
 			return new SMarker(this.ID);
 		}
@@ -272,12 +275,12 @@
 		#endregion Constructors
 
 		#region Methods
-		public virtual SIdent Clone()
+		public override SNode Clone()
 		{
 			return new SIdent(Value);
 		}
 
-		public virtual string Repl()
+		public override string Repl()
 		{
 			return " <SIdent '" + Value + "'> ";
 		}
@@ -302,7 +305,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SString Clone()
+		public override SNode Clone()
 		{
 			return new SString(Value);
 		}
@@ -337,7 +340,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SInt Clone()
+		public override SNode Clone()
 		{
 			return new SInt(Value);
 		}
@@ -367,7 +370,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SReal Clone()
+		public override SNode Clone()
 		{
 			return new SReal(Value);
 		}
@@ -397,7 +400,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SLong Clone()
+		public override SNode Clone()
 		{
 			return new SLong(Value);
 		}
@@ -417,7 +420,7 @@
 			get 
 			{
 				SNode current = this;
-				while (current.Members.Count > 0)
+				while (current.Members.Length > 0)
 					current = current.Members[0];
 
 				SString str = current as SString;
@@ -435,7 +438,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SObject Clone()
+		public override SNode Clone()
 		{
 			return new SObject();
 		}
@@ -465,7 +468,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SSubstream Clone()
+		public override SNode Clone()
 		{
 			return new SSubstream(Length);
 		}
@@ -501,7 +504,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SDBRow Clone()
+		public override SNode Clone()
 		{
 			return new SDBRow(ID, Data);
 		}
@@ -530,7 +533,7 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SDBRecords Clone()
+		public override SNode Clone()
 		{
 			return new SDBRecords();
 		}
