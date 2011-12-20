@@ -42,9 +42,9 @@ namespace EveCache
 		#endregion Fields
 
 		#region Properties
-		public virtual CacheFile_Iterator Begin { get { return new CacheFile_Iterator(this, Length, Length); } }
+		public virtual CacheFileReader Begin { get { return new CacheFileReader(this, 0, Length); } }
 		private byte[] Contents { get { return _Contents; } set { _Contents = value; } }
-		public virtual CacheFile_Iterator End { get { return new CacheFile_Iterator(this, 0, Length); } }
+		public virtual CacheFileReader End { get { return new CacheFileReader(this, Length, Length); } }
 		private string FileName { get { return _FileName; } set { _FileName = value; } }
 		public int Length
 		{
@@ -87,25 +87,20 @@ namespace EveCache
 			{
 				Contents[i] = buf[i];
 			}
-			while (i < Length)
-			{
-				i++;
-				Contents[i] = 0;
-			}
 
 			Valid = true;
 		}
 		#endregion Constructors
 
 		#region Methods
-		public virtual byte ByteAt(int pos)
+		public virtual byte Peek(int pos)
 		{
 			if (pos >= 0 && pos < Length)
 				return Contents[pos];
 			throw new EndOfFileException();
 		}
 
-		public virtual void PeekAt(byte[] data, int at, int len)
+		public virtual void Peek(byte[] data, int at, int len)
 		{
 			// Broken for big endian...
 			Array.Copy(Contents, at, data, 0, len);

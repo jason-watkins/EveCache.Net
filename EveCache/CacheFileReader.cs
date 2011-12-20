@@ -27,63 +27,53 @@
 namespace EveCache
 {
 	using System;
-	using System.Collections.Generic;
-	using System.Linq;
 	using System.Text;
 
-	public class CacheFile_Iterator
+	public class CacheFileReader
 	{
 		#region Fields
-        private CacheFile _CacheFile;
-        private int _LastPeek;
+        private CacheFile _cacheFile;
+        private int _lastPeek;
         private int _Position;
-        private int _Limit;
+        private int _Length;
 		#endregion Fields
 
 		#region Properties
-		public bool AtEnd { get { return !(Position <= Limit); } }
-		private CacheFile CacheFile { get { return _CacheFile; } set { _CacheFile = value; } }
-		private int LastPeek { get { return _LastPeek; } set { _LastPeek = value; } }
+		public bool AtEnd { get { return !(Position <= Length); } }
 		public int Position { get { return _Position; } private set { _Position = value; } }
-		public int Limit { get { return _Limit - _Position; } set { _Limit = _Position + value; } }
+		public int Length { get { return _Length - _Position; } set { _Length = _Position + value; } }
 		#endregion Properties
 
 		#region Constructors
-        public CacheFile_Iterator(CacheFile cf, int position, int valid_length)
+        public CacheFileReader(CacheFile cf, int position, int length)
 		{
-			CacheFile = cf;
-			LastPeek = 0;
+			_cacheFile = cf;
+			_lastPeek = 0;
 			Position = position;
-			Limit = valid_length;
+			Length = length;
 		}
 
-        public CacheFile_Iterator(CacheFile_Iterator cfi)
+        public CacheFileReader(CacheFileReader source)
 		{
-			CacheFile = cfi.CacheFile;
-			LastPeek = cfi.LastPeek;
-			Position = cfi.Position;
-			Limit = cfi.Limit;			
+			_cacheFile = source._cacheFile;
+			_lastPeek = source._lastPeek;
+			Position = source.Position;
+			Length = source.Length;
 		}
 		#endregion Constructors
 
 		#region Methods
-		public static bool operator ==(CacheFile_Iterator lhs, CacheFile_Iterator rhs)
+		public static bool operator ==(CacheFileReader lhs, CacheFileReader rhs)
 		{
-			if (lhs.Position == rhs.Position && lhs.CacheFile == rhs.CacheFile)
+			if (lhs.Position == rhs.Position && lhs._cacheFile == rhs._cacheFile)
 				return true;
 			else
 				return false;
 		}
 
-		public static bool operator !=(CacheFile_Iterator lhs, CacheFile_Iterator rhs)
+		public static bool operator !=(CacheFileReader lhs, CacheFileReader rhs)
 		{
 			return !(lhs == rhs);
-		}
-
-		public static CacheFile_Iterator operator +(CacheFile_Iterator lhs, int len)
-		{
-			lhs.Advance(len);
-			return lhs;
 		}
 
 		public bool Advance(int len)
@@ -92,49 +82,51 @@ namespace EveCache
 			return AtEnd;
 		}
 
-		public virtual byte PeekChar()
+
+		public virtual byte PeekByte()
 		{
-			return CacheFile.ByteAt(Position);
+			return _cacheFile.Peek(Position);
 		}
 
 		public virtual double PeekDouble()
 		{
 			byte[] bytes = new byte[8];
-			CacheFile.PeekAt(bytes, Position, 8);
+			_cacheFile.Peek(bytes, Position, 8);
 			return BitConverter.ToDouble(bytes, 0);
 		}
 
 		public virtual float PeekFloat()
 		{
 			byte[] bytes = new byte[4];
-			CacheFile.PeekAt(bytes, Position, 4);
+			_cacheFile.Peek(bytes, Position, 4);
 			return BitConverter.ToSingle(bytes, 0);
 		}
 
 		public virtual int PeekInt()
 		{
 			byte[] bytes = new byte[4];
-			CacheFile.PeekAt(bytes, Position, 4);
+			_cacheFile.Peek(bytes, Position, 4);
 			return BitConverter.ToInt32(bytes, 0);
 		}
 
 		public virtual int PeekShort()
 		{
 			byte[] bytes = new byte[2];
-			CacheFile.PeekAt(bytes, Position, 2);
+			_cacheFile.Peek(bytes, Position, 2);
 			return BitConverter.ToInt16(bytes, 0);
 		}
 
 		public virtual string PeekString(int len)
 		{
 			byte[] bytes = new byte[len];
-			CacheFile.PeekAt(bytes, Position, len);
+			_cacheFile.Peek(bytes, Position, len);
 			return Encoding.ASCII.GetString(bytes);
 		}
 
-		public byte ReadChar()
+
+		public byte ReadByte()
 		{
-			byte r = PeekChar();
+			byte r = PeekByte();
 			Advance(1);
 			return r;
 		}
@@ -181,6 +173,7 @@ namespace EveCache
 			long r = (long)a | ((long)b << 32);
 			return r;
 		}
+
 
 		public void Seek(int pos)
 		{

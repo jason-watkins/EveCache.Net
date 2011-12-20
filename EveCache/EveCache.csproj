@@ -50,7 +50,7 @@
     <Compile Include="Parser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="CacheFile.cs" />
-    <Compile Include="CacheFile_Iterator.cs" />
+    <Compile Include="CacheFileReader.cs" />
     <Compile Include="SNode.cs" />
   </ItemGroup>
   <ItemGroup />

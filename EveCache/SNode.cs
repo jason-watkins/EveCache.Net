@@ -178,10 +178,12 @@
 			if (Members.Count < 2 || (Members.Count & 1) > 0)
 				return null;
 
-			for (int i = 1; i < Members.Count; i+=2)
+			LinkedList<SNode> linkedMembers = new LinkedList<SNode>(Members);
+			LinkedListNode<SNode> i = linkedMembers.First.Next;
+			for (; i.Next != linkedMembers.Last; i = i.Next.Next)
 			{
-				if (Members[i] is SIdent && ((SIdent)Members[i]).Name == target)
-					return Members[i - 1];
+				if (i.Value is SIdent && ((SIdent)i.Value).Value == target)
+					return i.Previous.Value;
 			}
 
 			return null;
@@ -255,29 +257,29 @@
 	public class SIdent : SNode
 	{
 		#region Fields
-		private string _Name;
+		private string _Value;
 		#endregion Fields
 
 		#region Properties
-		public string Name { get { return _Name; } protected set { _Name = value; } }
+		public string Value { get { return _Value; } protected set { _Value = value; } }
 		#endregion Properties
 
 		#region Constructors
 		public SIdent(string name) : base(EStreamCode.EIdent)
 		{
-			Name = name;
+			Value = name;
 		}
 		#endregion Constructors
 
 		#region Methods
 		public virtual SIdent Clone()
 		{
-			return new SIdent(Name);
+			return new SIdent(Value);
 		}
 
 		public virtual string Repl()
 		{
-			return " <SIdent '" + Name + "'> ";
+			return " <SIdent '" + Value + "'> ";
 		}
 		#endregion Methods
 	}

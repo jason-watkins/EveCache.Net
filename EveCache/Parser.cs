@@ -7,19 +7,19 @@
 	public class Parser
 	{
 		#region Fields
-		private CacheFile_Iterator _Iter;
+		private CacheFileReader _Reader;
 		private uint _ShareCount;
 		private uint _ShareCursor;
-		SNode[][] _ShareObj;
+		SNode[] _ShareObj;
 		uint[] _ShareMap;
 		private List<SNode> _Streams;
 		#endregion Fields
 
 		#region Properties
-		private CacheFile_Iterator Iter { get { return _Iter; } set { _Iter = value; } }
+		private CacheFileReader Reader { get { return _Reader; } set { _Reader = value; } }
 		private uint ShareCount { get { return _ShareCount; } set { _ShareCount = value; } }
 		private uint ShareCursor { get { return _ShareCursor; } set { _ShareCursor = value; } }
-		private SNode[][] ShareObj { get { return _ShareObj; } set { _ShareObj = value; } }
+		private SNode[] ShareObj { get { return _ShareObj; } set { _ShareObj = value; } }
 		private uint[] ShareMap { get { return _ShareMap; } set { _ShareMap = value; } }
 		public List<SNode> Streams { get { return _Streams; } private set { _Streams = value; } }
 		#endregion Properties
@@ -28,9 +28,9 @@
 		#endregion Events
 
 		#region Constructors
-		public Parser(CacheFile_Iterator iter)
+		public Parser(CacheFileReader iter)
 		{
-			Iter = iter;
+			Reader = iter;
 			ShareCount = 0;
 			ShareCursor = 0;
 			ShareObj = null;
@@ -74,13 +74,161 @@
 		}
 		#endregion Static Methods
 		#region Methods
-		protected SNode GetDBRow();
+		protected SNode GetDBRow()
+		{
+			SNode nhead = ParseOne();
+			// get header
+			SObject head = nhead as SObject;
+			if (head == null)
+				throw new ParseException("The DBRow header isn't present...");
 
-		public int GetLength();
+			if (head.Name != "blue.DBRowDescriptor")
+				throw new ParseException("Bad descriptor name");
 
-		public void Parse();
+			STuple fields = head.Members[0].Members[1].Members[0] as STuple;
 
-		protected void Parse(SNode node, int limit);
+			int len = GetLength();
+			string compdata = Reader.ReadString(len);
+			byte[] olddata = Encoding.ASCII.GetBytes(compdata);
+
+			List<byte> newdata = new List<byte>();
+			rle_unpack(olddata, olddata.Length, newdata);
+			SNode body = new SDBRow(17, newdata);
+
+			CacheFile cf = new CacheFile(newdata);
+			CacheFileReader blob = cf.Begin;
+
+			SDict dict = new SDict(999999); // TODO: need dynamic sized dict
+			int step = 1;
+			while (step < 6)
+			{
+				foreach (SNode vi in fields.Members)
+				{
+					SNode fn = vi.Members[0].Clone();
+					SInt ft = (SInt)vi.Members[1];
+					int fti = ft.Value;
+
+					byte boolcount = 0;
+					byte boolbuf = 0;
+					SNode obj = null;
+					switch (fti)
+					{
+						case 2: // 16bit int
+							obj = new SInt(blob.ReadShort());
+							break;
+						case 3: // 32bit int
+							obj = new SInt(blob.ReadInt());
+							break;
+						case 4:
+							obj = new SReal(blob.ReadFloat());
+							break;
+						case 5: // double
+							obj = new SReal(blob.ReadDouble());
+							break;
+						case 6: // currency
+							if (step == 1)
+								obj = new SLong(blob.ReadLong());
+							break;
+						case 11: // boolean
+							if (step == 5)
+							{
+								if (boolcount == 0)
+								{
+									boolbuf = blob.ReadByte();
+									boolcount = 0x1;
+								}
+								if (boolbuf != 0 && boolcount != 0)
+									obj = new SInt(1);
+								else
+									obj = new SInt(0);
+								boolcount <<= 1;
+							}
+							break;
+						case 16:
+							obj = new SInt(blob.ReadByte());
+							break;
+						case 17:
+							goto case 16;
+						case 18: // 16bit int
+							goto case 2;
+						case 19: // 32bit int
+							goto case 3;
+						case 20: // 64bit int
+							goto case 6;
+						case 21: // 64bit int
+							goto case 6;
+						case 64: // timestamp
+							goto case 6;
+						case 128: // string types
+						case 129:
+						case 130:
+							obj = new SString("I can't parse strings yet - be patient");
+							break;
+						default:
+							throw new ParseException("Unhandled ADO type " + fti);
+					}
+
+					if (obj != null)
+					{
+						dict.AddMember(obj);
+						dict.AddMember(fn);
+					}
+				}
+
+				step++;
+			}
+
+			SNode fakerow = new STuple(3);
+			fakerow.AddMember(head);
+			fakerow.AddMember(body);
+			fakerow.AddMember(dict);
+			return fakerow;
+		}
+
+		public int GetLength()
+		{
+			int len = Reader.ReadByte();
+			if ((len & 0xff) == 0xFF)
+				len = Reader.ReadInt();
+			return len;
+		}
+
+		public void Parse()
+		{
+			try
+			{
+				while (!Reader.AtEnd)
+				{
+					byte check = Reader.ReadByte();
+					SNode stream = new SNode(EStreamCode.EStreamStart);
+					
+					if (check != (byte)EStreamCode.EStreamStart)
+						continue;
+
+					Streams.Add(stream);
+					ShareInit();
+					Parse(stream, 1); // -1 = not sure how long this will be
+
+					ShareSkip();
+				}
+			}
+			catch (EndOfFileException)
+			{
+				// Ignore the exception, parser has run amok!
+			}
+		}
+
+		protected void Parse(SNode stream, int limit)
+		{
+			while (!Reader.AtEnd && limit != 0)
+			{
+				SNode thisobj = ParseOne();
+				if (thisobj != null)
+					stream.AddMember(thisobj);
+
+				limit--;
+			}
+		}
 
 		protected SNode ParseOne()
 		{
@@ -91,7 +239,7 @@
 
 			try
 			{
-				byte type = Iter.ReadChar();
+				byte type = Reader.ReadByte();
 				check = (byte)(type & 0x3f);
 				isshared = (byte)(type & 0x40);
 			}
@@ -108,19 +256,19 @@
 					thisobj = new SNone();
 					break;
 				case EStreamCode.EString:
-					thisobj = new SString(Iter.ReadString(Iter.ReadChar()));
+					thisobj = new SString(Reader.ReadString(Reader.ReadByte()));
 					break;
 				case EStreamCode.ELong:
-					thisobj = new SLong(Iter.ReadLong());
+					thisobj = new SLong(Reader.ReadLong());
 					break;
 				case EStreamCode.EInteger:
-					thisobj = new SInt(Iter.ReadInt());
+					thisobj = new SInt(Reader.ReadInt());
 					break;
 				case EStreamCode.EShort:
-					thisobj = new SInt(Iter.ReadShort());
+					thisobj = new SInt(Reader.ReadShort());
 					break;
 				case EStreamCode.EByte:
-					thisobj = new SInt(Iter.ReadChar());
+					thisobj = new SInt(Reader.ReadByte());
 					break;
 				case EStreamCode.ENeg1Integer:
 					thisobj = new SInt(-1);
@@ -132,7 +280,7 @@
 					thisobj = new SInt(1);
 					break;
 				case EStreamCode.EReal:
-					thisobj = new SReal(Iter.ReadDouble());
+					thisobj = new SReal(Reader.ReadDouble());
 					break;
 				case EStreamCode.E0Real:
 					thisobj = new SReal(0);
@@ -141,7 +289,7 @@
 					thisobj = new SString(null);
 					break;
 				case EStreamCode.EString3:
-					thisobj = new SString(Iter.ReadString(1));
+					thisobj = new SString(Reader.ReadString(1));
 					break;
 				case EStreamCode.EString4:
 					goto case EStreamCode.EString;
@@ -151,7 +299,7 @@
 				case EStreamCode.EUnicodeString:
 					goto case EStreamCode.EString;
 				case EStreamCode.EIdent:
-					thisobj = new SIdent(Iter.ReadString(GetLength()));
+					thisobj = new SIdent(Reader.ReadString(GetLength()));
 					break;
 				case EStreamCode.ETuple:
 					{
@@ -179,7 +327,7 @@
 					break;
 				case EStreamCode.EChecksum:
 					thisobj = new SString("checksum");
-					Iter.ReadInt();
+					Reader.ReadInt();
 					break;
 				case EStreamCode.EBoolTrue:
 					thisobj = new SInt(1);
@@ -220,7 +368,7 @@
 					break;
 				case EStreamCode.EUnicodeString2:
 					/* Single unicode character */
-					thisobj = new SString(Iter.ReadString(2));
+					thisobj = new SString(Reader.ReadString(2));
 					break;
 				case EStreamCode.ECompressedRow:
 					thisobj = GetDBRow();
@@ -228,16 +376,16 @@
 				case EStreamCode.ESubstream:
 					{
 						int len = GetLength();
-						CacheFile_Iterator IterSub = new CacheFile_Iterator(Iter);
-						IterSub.Limit = len;
+						CacheFileReader readerSub = new CacheFileReader(Reader);
+						readerSub.Length = len;
 						SSubstream ss = new SSubstream(len);
 						thisobj = ss;
-						Parser sp = new Parser(IterSub);
+						Parser sp = new Parser(readerSub);
 						sp.Parse();
 						for (int i = 0; i < sp.Streams.Count; i++)
 							ss.AddMember(sp.Streams[i].Clone());
 
-						Iter.Seek(IterSub.Position);
+						Reader.Seek(readerSub.Position);
 						break;
 					}
 				case EStreamCode.E2Tuple:
@@ -247,27 +395,27 @@
 				case EStreamCode.EString2:
 					goto case EStreamCode.EString;
 				case EStreamCode.ESizedInt:
-					switch (Iter.ReadChar())
+					switch (Reader.ReadByte())
 					{
 						case 8:
-							thisobj = new SLong(Iter.ReadLong());
+							thisobj = new SLong(Reader.ReadLong());
 							break;
 						case 4:
-							thisobj = new SInt(Iter.ReadInt());
+							thisobj = new SInt(Reader.ReadInt());
 							break;
 						case 3:
 							// The following seems more correct than the forumla used.
-							// int value = (Iter.Char() << 16) + (Iter.ReadChar());
-							thisobj = new SInt((Iter.ReadChar()) + (Iter.ReadChar() << 16));
+							// int value = (Reader.Char() << 16) + (Reader.ReadByte());
+							thisobj = new SInt((Reader.ReadByte()) + (Reader.ReadByte() << 16));
 							break;
 						case 2:
-							thisobj = new SInt(Iter.ReadShort());
+							thisobj = new SInt(Reader.ReadShort());
 							break;
 					}
 					break;
 				case (EStreamCode)0x2d:
-					if (Iter.ReadChar() != (byte)0x2d)
-						throw new ParseException("Didn't encounter a double 0x2d where one was expected at " + (Iter.Position - 2));
+					if (Reader.ReadByte() != (byte)0x2d)
+						throw new ParseException("Didn't encounter a double 0x2d where one was expected at " + (Reader.Position - 2));
 					else if (lastDbRow != null)
 						lastDbRow.IsLast = true;
 					return null;
@@ -275,7 +423,7 @@
 					break;
 				default:
 					throw new ParseException("Can't identify type " + String.Format("{0:0x2}", check) +
-											" at position " + String.Format("{0:0x2}", Iter.Position) + " limit " + Iter.Limit);
+											" at position " + String.Format("{0:0x2}", Reader.Position) + " limit " + Reader.Length);
 
 			}
 
@@ -292,13 +440,69 @@
 			return thisobj;
 		}
 
-		protected void ShareAdd(SNode obj);
+		protected void ShareAdd(SNode obj)
+		{
+			if (ShareMap == null || ShareObj == null)
+				throw new ParseException("Uninitialized share");
+			if (ShareCursor >= ShareCount)
+				throw new ParseException("cursor out of range");
+			uint shareid = ShareMap[ShareCursor];
+			if (shareid > ShareCount)
+				throw new ParseException("shareid out of range");
 
-		protected SNode ShareGet(int id);
+			
+			ShareObj[shareid] = obj.Clone();
 
-		protected uint ShareInit();
+			ShareCursor++;
+		}
 
-		protected void SharSkip();
+		protected SNode ShareGet(int id)
+		{
+			if (id > ShareCount)
+				throw new ParseException("ShareID out of range " + id + " > " + ShareCount);
+
+			if (ShareObj[id] == null)
+				throw new ParseException("ShareTab: No entry at position " + id);
+
+			return ShareObj[id].Clone();
+		}
+
+		protected uint ShareInit()
+		{
+			int shares = Reader.ReadInt();
+			if (shares >= 16384) // Some large number
+				return 0;
+
+			int shareskip = 0;
+			if (shares != 0)
+			{
+				ShareMap = new uint[shares + 1];
+				ShareObj = new SNode[shares + 1];
+
+				shareskip = 4 * shares;
+				int opos = Reader.Position;
+				int olim = Reader.Length;
+				Reader.Seek(opos + olim - shareskip);
+				int i;
+				for (i = 0; i < shares; i++)
+				{
+					ShareMap[i] = (uint)Reader.ReadInt();
+					ShareObj[i] = null;
+				}
+				ShareObj[shares] = null;
+				ShareMap[shares] = 0;
+
+				Reader.Seek(opos);
+				Reader.Length = olim - shareskip;
+			}
+			ShareCount = (uint)shares;
+			return (uint)shares;
+		}
+
+		protected void ShareSkip()
+		{
+			Reader.Advance((int)(ShareCount * 4));
+		}
 		#endregion Methods
 	}
 
