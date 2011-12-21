@@ -1,60 +1,12 @@
-# Compiled source #
-###################
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
-
-# Packages #
-############
-# it's better to unpack these files and commit the raw source
-# git has its own built in compression methods
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
-
-# Logs and databases #
-######################
-*.log
-*.sql
-*.sqlite0
-*.sdf
-
-# OS generated files #
-######################
-.DS_Store?
-ehthumbs.db
-Icon?
-Thumbs.db
-
-# Debug Files #
-###############
-*.ilk
-*.pdb
-*.exp
-*.lib
-*.tlog
-*.manifest
-*.manifest.res
-*.lastbuildstate
-*.obj
-*.rc
-*.idb
-
-# VS Files #
+#    VS Files   #
 #################
+bin/
+obj/
 Debug/
 Release/
 TestResults/
-bin/
-Obj/
-*.openSDF
-*.suo
 ipch/
+*.suo
+*.user
+*.sdf
+*.sbr
