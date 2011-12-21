@@ -1,4 +1,29 @@
-﻿namespace EveCache
+﻿#region License
+/* EveCache.Net - C# EVE Cache File Reader Library
+ * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
+ *
+ * Based on libevecache
+ * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+#endregion
+
+namespace EveCache
 {
 	using System;
 	using System.Collections.Generic;
@@ -8,28 +33,25 @@
 	public class SNode
 	{
 		#region Fields
-		private SNodeReader _Members;
+		private SNodeContainer _Members;
 		private EStreamCode _Type;
 		#endregion Fields
 
 		#region Properties
-		public virtual SNodeReader Members { get { return _Members; } protected set { _Members = value; } }
+		public virtual SNodeContainer Members { get { return _Members; } protected set { _Members = value; } }
 		public virtual EStreamCode Type { get { return _Type; } set { _Type = value; } }
 		#endregion Properties
 
 		#region Constructors
 		public SNode(EStreamCode t)
 		{
-			Members = new SNodeReader();
+			Members = new SNodeContainer();
 			Type = t;
 		}
 
 		public SNode(SNode source)
 		{
-			Members = new SNodeReader();
-			foreach (SNode node in source.Members)
-				Members.Add(node.Clone());
-
+			Members = new SNodeContainer(source.Members);
 			Type = source.Type;
 		}
 		#endregion Constructors
@@ -47,7 +69,7 @@
 
 		public virtual string Repl()
 		{
-			return "<SNode type " + String.Format("0:x2", Type) + ">";
+			return " <SNode type " + String.Format("0:x2", Type) + "> ";
 		}
 		#endregion Methods
 	}
@@ -178,15 +200,16 @@
 			if (Members.Length < 2 || (Members.Length & 1) > 0)
 				return null;
 
-			Members.Seek(1, SeekOrigin.Begin);
-			SNode n = Members.Current;
-			while (n != Members.End)
+			SNodeContainer.Iterator iterator = Members.GetIterator();
+			iterator.Seek(1);
+			SNode n = iterator.Current;
+			while (n != Members.Last)
 			{
 				if (n is SIdent && ((SIdent)n).Value == target)
-					return Members.Previous;
+					return iterator.Previous;
 
-				Members.Seek(2);
-				n = Members.Current;
+				iterator.Seek(2);
+				n = iterator.Current;
 			}
 
 			return null;

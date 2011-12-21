@@ -1,11 +1,11 @@
 ﻿#region License
-/* EveCache.Net - EVE Cache File Reader Library
+/* EveCache.Net - C# EVE Cache File Reader Library
  * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
  *
  * Based on libevecache
  * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
- * http: * dev.eve-central.com/libevecache/
- * http: * gitorious.org/libevecache
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public

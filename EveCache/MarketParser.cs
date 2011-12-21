@@ -1,11 +1,11 @@
 ﻿#region License
-/* EveCache.Net - EVE Cache File Reader Library
+/* EveCache.Net - C# EVE Cache File Reader Library
  * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
  *
  * Based on libevecache
  * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
- * http: * dev.eve-central.com/libevecache/
- * http: * gitorious.org/libevecache
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -31,18 +31,18 @@ namespace EveCache
 	{
 		#region Fields
 		private MarketList _List;
-		private SNodeReader _Stream;
+		private SNodeContainer _Stream;
 		private bool _Valid;
 		#endregion Fields
 
 		#region Properties
 		public virtual MarketList List { get { return _List; } private set { _List = value; } }
-		protected virtual SNodeReader Stream { get { return _Stream; } set { _Stream = value; } }
+		protected virtual SNodeContainer Stream { get { return _Stream; } set { _Stream = value; } }
 		private bool Valid { get { return _Valid; } set { _Valid = value; } }
 		#endregion Properties
 
 		#region Constructors
-		public MarketParser(SNodeReader stream)
+		public MarketParser(SNodeContainer stream)
 		{
 			Stream = stream;
 			Valid = false;
@@ -114,11 +114,8 @@ namespace EveCache
 
 		private void InitWithFile(string fileName)
 		{
-			CacheFile cf = new CacheFile(fileName);
-			if (!cf.ReadFile())
-				throw new ParseException("Can't open file " + fileName);
+			CacheFileReader cfReader = new CacheFileReader(fileName);
 
-			CacheFileReader cfReader = cf.Reader;
 			Parser parser = new Parser(cfReader);
 			parser.Parse();
 			SNode sNode = parser.Streams[0];
@@ -132,14 +129,14 @@ namespace EveCache
 		{
 			if (node.Members.Length > 0)
 			{
-				SNodeReader members = node.Members;
-				for (SNode n = members.Begin; n != members.End; n = members.Next)
+				SNodeContainer members = node.Members;
+				for (int i = 0; i < members.Length; i++)
 				{
-					SDBRow dbrow = n as SDBRow;
+					SDBRow dbrow = members[i] as SDBRow;
 					if (dbrow != null)
-						ParseDbRow(members.Next);
+						ParseDbRow(members[++i]);
 					else
-						Parse(n);
+						Parse(members[i]);
 				}
 			}
 		}
@@ -148,13 +145,13 @@ namespace EveCache
 		{
 			MarketOrder order = new MarketOrder();
 
-			SNodeReader members = node.Members;
-			for (SNode i = members.Begin; i != members.End; i = members.Next)
+			SNodeContainer members = node.Members;
+			for ( int i = 0; i < members.Length; i++)
 			{
-				SNode value = i;
-				i = members.Next;
-				SMarker key = i as SMarker;
-				SIdent ident = i as SIdent;
+				SNode value = members[i];
+				i++;
+				SMarker key = members[i] as SMarker;
+				SIdent ident = members[i] as SIdent;
 
 				int typeKey = -1;
 

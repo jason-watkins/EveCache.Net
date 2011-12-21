@@ -1,26 +1,52 @@
-﻿namespace EveCache
+﻿#region License
+/* EveCache.Net - C# EVE Cache File Reader Library
+ * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
+ *
+ * Based on libevecache
+ * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+#endregion
+
+namespace EveCache
 {
 	using System;
 	using System.Collections.Generic;
 	using System.Text;
+	using System.IO;
 
 	public class Parser
 	{
 		#region Fields
 		private CacheFileReader _Reader;
-		private uint _ShareCount;
-		private uint _ShareCursor;
-		SNode[] _ShareObj;
-		uint[] _ShareMap;
+		private int _ShareCount;
+		private int _ShareCursor;
+		private Dictionary<int, SNode> _ShareObj;
+		private Dictionary<int, int> _ShareMap;
 		private List<SNode> _Streams;
 		#endregion Fields
 
 		#region Properties
 		private CacheFileReader Reader { get { return _Reader; } set { _Reader = value; } }
-		private uint ShareCount { get { return _ShareCount; } set { _ShareCount = value; } }
-		private uint ShareCursor { get { return _ShareCursor; } set { _ShareCursor = value; } }
-		private SNode[] ShareObj { get { return _ShareObj; } set { _ShareObj = value; } }
-		private uint[] ShareMap { get { return _ShareMap; } set { _ShareMap = value; } }
+		private int ShareCount { get { return _ShareCount; } set { _ShareCount = value; } }
+		private int ShareCursor { get { return _ShareCursor; } set { _ShareCursor = value; } }
+		private Dictionary<int, SNode> ShareObj { get { return _ShareObj; } set { _ShareObj = value; } }
+		private Dictionary<int, int> ShareMap { get { return _ShareMap; } set { _ShareMap = value; } }
 		public List<SNode> Streams { get { return _Streams; } private set { _Streams = value; } }
 		#endregion Properties
 
@@ -28,13 +54,15 @@
 		#endregion Events
 
 		#region Constructors
-		public Parser(CacheFileReader iter)
+		public Parser(CacheFileReader reader)
 		{
-			Reader = iter;
+			Reader = reader;
 			ShareCount = 0;
 			ShareCursor = 0;
 			ShareObj = null;
 			ShareMap = null;
+
+			Streams = new List<SNode>();
 		}
 		#endregion Constructors
 
@@ -95,8 +123,7 @@
 			rle_unpack(olddata, olddata.Length, newdata);
 			SNode body = new SDBRow(17, newdata);
 
-			CacheFile cf = new CacheFile(newdata.ToArray());
-			CacheFileReader blob = cf.Reader;
+			CacheFileReader blob = new CacheFileReader(newdata.ToArray());
 
 			SDict dict = new SDict(999999); // TODO: need dynamic sized dict
 			int step = 1;
@@ -376,8 +403,7 @@
 				case EStreamCode.ESubstream:
 					{
 						int len = GetLength();
-						CacheFileReader readerSub = new CacheFileReader(Reader);
-						readerSub.Length = len;
+						CacheFileReader readerSub = new CacheFileReader(Reader, len);
 						SSubstream ss = new SSubstream(len);
 						thisobj = ss;
 						Parser sp = new Parser(readerSub);
@@ -446,9 +472,9 @@
 				throw new ParseException("Uninitialized share");
 			if (ShareCursor >= ShareCount)
 				throw new ParseException("cursor out of range");
-			uint shareid = ShareMap[ShareCursor];
-			if (shareid > ShareCount)
-				throw new ParseException("shareid out of range");
+			int shareid = ShareMap[ShareCursor];
+			//if (shareid > ShareCount)
+			//    throw new ParseException("shareid out of range");
 
 			
 			ShareObj[shareid] = obj.Clone();
@@ -461,13 +487,13 @@
 			if (id > ShareCount)
 				throw new ParseException("ShareID out of range " + id + " > " + ShareCount);
 
-			if (ShareObj[id] == null)
+			if (ShareObj[ShareMap[id]] == null)
 				throw new ParseException("ShareTab: No entry at position " + id);
 
-			return ShareObj[id].Clone();
+			return ShareObj[ShareMap[id]].Clone();
 		}
 
-		protected uint ShareInit()
+		protected int ShareInit()
 		{
 			int shares = Reader.ReadInt();
 			if (shares >= 16384) // Some large number
@@ -476,27 +502,24 @@
 			int shareskip = 0;
 			if (shares != 0)
 			{
-				ShareMap = new uint[shares + 1];
-				ShareObj = new SNode[shares + 1];
+				ShareMap = new Dictionary<int, int>(shares + 1);
+				ShareObj = new Dictionary<int, SNode>(shares + 1);
 
 				shareskip = 4 * shares;
 				int opos = Reader.Position;
-				int olim = Reader.Length;
-				Reader.Seek(opos + olim - shareskip);
-				int i;
-				for (i = 0; i < shares; i++)
+				int olim = Reader.Limit;
+				Reader.Seek(shareskip, SeekOrigin.End);
+				for (int i = 0; i < shares; i++)
 				{
-					ShareMap[i] = (uint)Reader.ReadInt();
-					ShareObj[i] = null;
+					ShareMap[i] = Reader.ReadInt();
 				}
-				ShareObj[shares] = null;
-				ShareMap[shares] = 0;
+				ShareMap[ShareCount] = 0;
 
-				Reader.Seek(opos);
-				Reader.Length = olim - shareskip;
+				Reader.Seek(opos, SeekOrigin.Begin);
+				Reader.Limit = olim - shareskip;
 			}
-			ShareCount = (uint)shares;
-			return (uint)shares;
+			ShareCount = shares;
+			return shares;
 		}
 
 		protected void ShareSkip()

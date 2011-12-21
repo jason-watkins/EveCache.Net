@@ -1,11 +1,11 @@
 ﻿#region License
-/* EveCache.Net - EVE Cache File Reader Library
+/* EveCache.Net - C# EVE Cache File Reader Library
  * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
  *
  * Based on libevecache
  * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
- * http: * dev.eve-central.com/libevecache/
- * http: * gitorious.org/libevecache
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -29,54 +29,95 @@ namespace EveCache
 	using System.IO;
 	using System.Text;
 
+	/// <summary>
+	/// A memory stream representing a binary cache file.
+	/// </summary>
 	public class CacheFileReader
 	{
 		#region Fields
-		private CacheFile _data;
-		private int _Length;
+		private byte[] _Buffer;
+		private string _FileName;
+		private int _Limit;
 		private int _Position;
-
+		private bool _setLimit;
 		#endregion Fields
 
 		#region Properties
-		public bool AtEnd { get { return !(Position <= Length); } }
-		public int Position { get { return _Position; } private set { _Position = value; } }
-		public int Length { get { return _Length; } set { _Length = value; } }
+		public bool AtEnd { get { return !(Position < Length); } }
+		private byte[] Buffer { get { return _Buffer; } set { _Buffer = value; } }
+		public string FileName { get { return _FileName; } private set { _FileName = value; } }
+		public int Length { get { return _Buffer.Length; } }
+		public int Limit
+		{
+			get { return _setLimit ? _Limit : Length; }
+			set
+			{
+				_Limit = value <= Length ? value : Length;
+				_setLimit = true;
+			}
+		}
+		public int Position
+		{
+			get { return _Position; }
+			protected set
+			{
+				if (value < 0)
+					_Position = 0;
+				else if (value >= Limit)
+					_Position = Limit - 1;
+				else
+					_Position = value;
+			}
+		}
 		#endregion Properties
 
 		#region Constructors
-		public CacheFileReader(CacheFile cf)
+		public CacheFileReader(string fileName)
 		{
-			_data = cf;
+			FileStream file = File.OpenRead(fileName);
+			Buffer = new byte[file.Length + 16];
+			file.Seek(0, SeekOrigin.Begin);
+			file.Read(Buffer, 0, (int)file.Length);
+			file.Close();
+			FileName = fileName;
 			Position = 0;
 		}
 
-		public CacheFileReader(CacheFile cf, int position) : this(cf)
+		public CacheFileReader(byte[] buffer)
 		{
-			Position = position;
+			Buffer = new byte[buffer.Length + 16];
+			Array.Copy(buffer, Buffer, buffer.Length);
+			FileName = String.Empty;
+			Position = 0;
 		}
 
 		public CacheFileReader(CacheFileReader source)
 		{
-			_data = source._data;
+			Buffer = source.Buffer;
+			FileName = source.FileName;
+			Limit = source.Limit;
+			Position = source.Position;
+		}
+
+		public CacheFileReader(CacheFileReader source, int limit) : this(source)
+		{
+			Limit = limit + source.Position;
 			Position = source.Position;
 		}
 		#endregion Constructors
 
-		#region Methods
+		#region Static Methods
 		public static bool operator ==(CacheFileReader lhs, CacheFileReader rhs)
 		{
-			if (lhs.Position == rhs.Position && lhs._data == rhs._data)
-				return true;
-			else
-				return false;
+			return (lhs.Buffer == rhs.Buffer && lhs.Position == rhs.Position);
 		}
 
 		public static bool operator !=(CacheFileReader lhs, CacheFileReader rhs)
 		{
 			return !(lhs == rhs);
 		}
-
+		#endregion
+		#region Methods
 		public override bool Equals(object obj)
 		{
 			return this == (CacheFileReader)obj;
@@ -84,133 +125,144 @@ namespace EveCache
 
 		public override int GetHashCode()
 		{
-			return _data.GetHashCode();
+			return Buffer.GetHashCode();
 		}
 
-		public virtual byte PeekByte()
+		private byte GetByte()
 		{
-			return _data.Peek(Position);
+			return Buffer[Position];
 		}
 
-		public virtual double PeekDouble()
+		private int GetBytes(byte[] destination, int count)
 		{
-			byte[] bytes = new byte[8];
-			_data.Peek(bytes, Position, 8);
-			return BitConverter.ToDouble(bytes, 0);
+			int copyLength;
+			if (Position + count < Length)
+				copyLength = count;
+			else
+				copyLength = Length - Position;
+
+			Array.Copy(Buffer, Position, destination, 0, copyLength);
+			return copyLength;
 		}
 
-		public virtual float PeekFloat()
+
+		public byte PeekByte()
 		{
-			byte[] bytes = new byte[4];
-			_data.Peek(bytes, Position, 4);
-			return BitConverter.ToSingle(bytes, 0);
+			return GetByte();
 		}
 
-		public virtual int PeekInt()
+		public double PeekDouble()
 		{
-			byte[] bytes = new byte[4];
-			_data.Peek(bytes, Position, 4);
-			return BitConverter.ToInt32(bytes, 0);
+			byte[] temp = new byte[8];
+			GetBytes(temp, 8);
+			return BitConverter.ToDouble(temp, 0);
 		}
 
-		public virtual int PeekShort()
+		public float PeekFloat()
 		{
-			byte[] bytes = new byte[2];
-			_data.Peek(bytes, Position, 2);
-			return BitConverter.ToInt16(bytes, 0);
+			byte[] temp = new byte[4];
+			GetBytes(temp, 4);
+			return BitConverter.ToSingle(temp, 0);
 		}
 
-		public virtual string PeekString(int len)
+		public long PeekLong()
 		{
-			byte[] bytes = new byte[len];
-			_data.Peek(bytes, Position, len);
-			return Encoding.ASCII.GetString(bytes);
+			byte[] temp = new byte[8];
+			GetBytes(temp, 8);
+			return BitConverter.ToInt64(temp, 0);
+		}
+
+		public int PeekInt()
+		{
+			byte[] temp = new byte[4];
+			GetBytes(temp, 4);
+			return BitConverter.ToInt32(temp, 0);
+		}
+
+		public short PeekShort()
+		{
+			byte[] temp = new byte[2];
+			GetBytes(temp, 2);
+			return BitConverter.ToInt16(temp, 0);
+		}
+
+		public string PeekString(int length)
+		{
+			byte[] temp = new byte[length];
+			GetBytes(temp, length);
+			return Encoding.ASCII.GetString(temp);
 		}
 
 
 		public byte ReadByte()
 		{
-			byte r = PeekByte();
-			Position += 1;
-			return r;
+			byte temp = PeekByte();
+			Seek(1);
+			return temp;
 		}
 
 		public double ReadDouble()
 		{
-			double r = PeekDouble();
-			Position += 8;
-			return r;
+			double temp = PeekDouble();
+			Seek(8);
+			return temp;
 		}
 
 		public float ReadFloat()
 		{
-			float r = PeekFloat();
-			Position += 4;
-			return r;
-		}
-
-		public int ReadInt()
-		{
-			int r = PeekInt();
-			Position += 4;
-			return r;
-		}
-
-		public int ReadShort()
-		{
-			int r = PeekShort();
-			Position += 2;
-			return r;
-		}
-
-		public string ReadString(int len)
-		{
-			string r = PeekString(len);
-			Position += len;
-			return r;
+			float temp = PeekFloat();
+			Seek(4);
+			return temp;
 		}
 
 		public long ReadLong()
 		{
-			uint a = (uint)ReadInt();
-			uint b = (uint)ReadInt();
-			long r = (long)b | ((long)a << 32);
-			return r;
+			long temp = PeekLong();
+			Seek(8);
+			return temp;
 		}
 
-		public void Seek(int offset) { Seek(offset, SeekOrigin.Current); }
+		public int ReadInt()
+		{
+			int temp = PeekInt();
+			Seek(4);
+			return temp;
+		}
 
-		public void Seek(int offset, SeekOrigin origin)
+		public short ReadShort()
+		{
+			short temp = PeekShort();
+			Seek(2);
+			return temp;
+		}
+
+		public string ReadString(int length)
+		{
+			string temp = PeekString(length);
+			Seek(length);
+			return temp;
+		}
+
+
+		public int Seek(int offset) { return Seek(offset, SeekOrigin.Current); }
+
+		public int Seek(int offset, SeekOrigin origin)
 		{
 			switch (origin)
 			{
 				case SeekOrigin.Begin:
-					if (offset < 0)
-						throw new SystemException("offset cannot be negative with SeekOrigin.Begin");
-					else if (offset >= Length)
-						throw new SystemException("offset is greater than Length");
-					else
-						Position = offset;
+					Position = offset;
 					break;
 				case SeekOrigin.Current:
-					if (Position + offset < 0)
-						throw new SystemException("offset would result in a negative position");
-					else if (Position + offset >= Length)
-						throw new SystemException("offset + Position is greater than Length");
-					else
-						Position += offset;
+					Position += offset;
 					break;
 				case SeekOrigin.End:
-					if (offset > 0)
-						throw new SystemException("offset cannot be positive with SeekOrigin.End");
-					else if (offset + Length < 0)
-						throw new SystemException("offset would result in a negative position");
-					else
-						Position = Length + offset - 1;
+					Position = Limit - offset - 1;
 					break;
 				default:
-					throw new SystemException("invalid origin");
+					throw new IOException("Invalid origin");
 			}
+			return Position;
 		}
 		#endregion Methods
 	}

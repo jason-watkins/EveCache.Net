@@ -40,21 +40,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CacheFileReader.cs" />
     <Compile Include="ColumnLookup.cs" />
     <Compile Include="EndOfFileException.cs" />
     <Compile Include="EStreamCodeEnum.cs" />
     <Compile Include="MarketList.cs" />
     <Compile Include="MarketOrder.cs" />
     <Compile Include="MarketParser.cs" />
-    <Compile Include="SNodeReader.cs" />
+    <Compile Include="SNodeContainer.cs" />
     <Compile Include="ParseException.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CacheFile.cs" />
-    <Compile Include="CacheFileReader.cs" />
     <Compile Include="SNode.cs" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

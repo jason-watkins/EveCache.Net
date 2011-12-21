@@ -57,3 +57,4 @@ bin/
 Obj/
 *.openSDF
 *.suo
+ipch/

@@ -14,16 +14,16 @@
 			}
 		}
 
-		static void dump(SNodeReader stream, int level)
+		static void dump(SNodeContainer stream, int level)
 		{
-			for (SNode vi = stream.Begin; vi != stream.End; vi = stream.Next)
+			foreach (SNode node in stream)
 			{
 				nspaces(level);
-				Console.WriteLine("" + vi.Repl() +  " ");
-				if (vi.Members.Length > 0) 
+				Console.WriteLine("" + node.Repl() +  " ");
+				if (node.Members.Length > 0) 
 				{ // generic catch all members with nested members
-					SNode sn = vi;
-					SNodeReader ste = sn.Members;
+					SNode sn = node;
+					SNodeContainer ste = sn.Members;
 					nspaces(level);
 					Console.WriteLine(" (");
 
@@ -36,9 +36,9 @@
 
 		}
 
-		static void market(SNodeReader node)
+		static void market(SNodeContainer nodeMembers)
 		{
-			MarketParser mp = new MarketParser(node);
+			MarketParser mp = new MarketParser(nodeMembers);
 			try
 			{
 				mp.Parse();
@@ -107,32 +107,27 @@
 			for (int filelen = argsconsumed; filelen < args.Length; filelen++)
 			{
 				string fileName = args[filelen];
-				CacheFile cF = new CacheFile(fileName);
-				if (!cF.ReadFile())
-				{
-					// Not a valid file, skip
-					Console.WriteLine("Can't open " + fileName);
-					continue;
-				}
+				CacheFileReader cfr;
+				try { cfr = new CacheFileReader(fileName); }
+				catch (System.IO.FileNotFoundException) { continue; }
 
-				CacheFileReader cfr = cF.Reader;
 				Parser parser = new Parser(cfr);
 
-				try
+				//try
 				{
 					parser.Parse();
 				}
-				catch (ParseException e)
-				{
-					Console.WriteLine("Parse exception " + e.Message);		
-				}
+				//catch (ParseException e)
+				//{
+				//    Console.WriteLine("Parse exception " + e.Message);		
+				//}
 
 				if (dumpStructure)
 				{
 					// TODO: more than one stream
 					for (int i = 0; i < parser.Streams.Count; i++)
 					{
-						SNodeReader streams = parser.Streams[i].Members;
+						SNodeContainer streams = parser.Streams[i].Members;
 						dump(streams, 0);
 					}
 				}
@@ -141,11 +136,12 @@
 					for (int i = 0; i < parser.Streams.Count; i++)
 					{
 						SNode snode = parser.Streams[i];
-						market(snode);
+						market(snode.Members);
 					}
 				}
 				Console.WriteLine();
 			}
+			return 1;
 		}
 	}
 }
