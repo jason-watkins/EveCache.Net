@@ -51,7 +51,23 @@
     <Compile Include="ParseException.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SNode.cs" />
+    <Compile Include="SNodes\SNodeDebug.cs" />
+    <Compile Include="SNodes\SSubStream.cs" />
+    <Compile Include="SNodes\SDBRow.cs" />
+    <Compile Include="SNodes\SDBRecords.cs" />
+    <Compile Include="SNodes\SObject.cs" />
+    <Compile Include="SNodes\SReal.cs" />
+    <Compile Include="SNodes\SLong.cs" />
+    <Compile Include="SNodes\SInt.cs" />
+    <Compile Include="SNodes\SString.cs" />
+    <Compile Include="SNodes\SIdent.cs" />
+    <Compile Include="SNodes\SMarker.cs" />
+    <Compile Include="SNodes\SNone.cs" />
+    <Compile Include="SNodes\SDict.cs" />
+    <Compile Include="SNodes\SDBHeader.cs" />
+    <Compile Include="SNodes\SNode.cs" />
+    <Compile Include="SNodes\SStreamNode.cs" />
+    <Compile Include="SNodes\STuple.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

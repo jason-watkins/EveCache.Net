@@ -411,7 +411,7 @@ namespace EveCache
 					{
 						int len = GetLength();
 						CacheFileReader readerSub = new CacheFileReader(Reader, len);
-						SSubstream ss = new SSubstream(len);
+						SSubStream ss = new SSubStream(len);
 						thisobj = ss;
 						Parser sp = new Parser(readerSub);
 						sp.Parse();
