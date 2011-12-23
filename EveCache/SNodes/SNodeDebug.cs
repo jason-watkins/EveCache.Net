@@ -38,7 +38,7 @@ namespace EveCache
 		private static List<SNode> __nodes__;
 		#endregion
 		#region Fields
-		private int __id__;
+		protected int __id__;
 		#endregion Fields
 
 		#region Constructors
