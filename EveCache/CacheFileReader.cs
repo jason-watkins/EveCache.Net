@@ -1,183 +1,302 @@
 ﻿#region License
-///<license>
-/// EveCache.Net - EVE Cache File Reader Library
-/// Copyright (C) 2011 Jason Watkins
-/// 
-/// Based on libevecache
-/// Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
-/// http://dev.eve-central.com/libevecache/
-/// http://gitorious.org/libevecache
-/// 
-/// This library is free software; you can redistribute it and/or
-/// modify it under the terms of the GNU General Public
-/// License as published by the Free Software Foundation; either
-/// version 2 of the License, or (at your option) any later version.
-/// 
-/// This library is distributed in the hope that it will be useful,
-/// but WITHOUT ANY WARRANTY; without even the implied warranty of
-/// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-/// General Public License for more details.
-/// 
-/// You should have received a copy of the GNU General Public
-/// License along with this library; if not, write to the Free Software
-/// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-///</license>
+/* EveCache.Net - C# EVE Cache File Reader Library
+ * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
+ *
+ * Based on libevecache
+ * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 #endregion
 
 namespace EveCache
 {
 	using System;
+	using System.IO;
 	using System.Text;
 
+	/// <summary>
+	/// A memory stream representing a binary cache file.
+	/// </summary>
 	public class CacheFileReader
 	{
 		#region Fields
-        private CacheFile _cacheFile;
-        private int _lastPeek;
-        private int _Position;
-        private int _Length;
+		private byte[] _Buffer;
+		private string _FileName;
+		private int _Limit;
+		private int _Position;
+		private bool _setLimit;
 		#endregion Fields
 
 		#region Properties
-		public bool AtEnd { get { return !(Position <= Length); } }
-		public int Position { get { return _Position; } private set { _Position = value; } }
-		public int Length { get { return _Length - _Position; } set { _Length = _Position + value; } }
+		public bool AtEnd { get { return !(Position < Limit); } }
+		private byte[] Buffer { get { return _Buffer; } set { _Buffer = value; } }
+		public string FileName { get { return _FileName; } private set { _FileName = value; } }
+		public int Length { get { return _Buffer.Length; } }
+		public int Limit
+		{
+			get { return _setLimit ? _Limit : Length - 16; }
+			set
+			{
+				_Limit = value <= Length ? value : Length;
+				_setLimit = true;
+			}
+		}
+		public int Position
+		{
+			get { return _Position; }
+			protected set
+			{
+				if (value < 0)
+					_Position = 0;
+				else if (value >= Length)
+					_Position = Length;
+				else
+					_Position = value;
+			}
+		}
 		#endregion Properties
 
 		#region Constructors
-        public CacheFileReader(CacheFile cf, int position, int length)
+		public CacheFileReader(string fileName)
 		{
-			_cacheFile = cf;
-			_lastPeek = 0;
-			Position = position;
-			Length = length;
+			FileStream file = File.OpenRead(fileName);
+			Buffer = new byte[file.Length + 16];
+			file.Seek(0, SeekOrigin.Begin);
+			file.Read(Buffer, 0, (int)file.Length);
+			file.Close();
+			FileName = fileName;
+			Position = 0;
 		}
 
-        public CacheFileReader(CacheFileReader source)
+		public CacheFileReader(byte[] buffer)
 		{
-			_cacheFile = source._cacheFile;
-			_lastPeek = source._lastPeek;
+			Buffer = new byte[buffer.Length + 16];
+			Array.Copy(buffer, Buffer, buffer.Length);
+			FileName = String.Empty;
+			Position = 0;
+		}
+
+		public CacheFileReader(CacheFileReader source)
+		{
+			Buffer = source.Buffer;
+			FileName = source.FileName;
+			Limit = source.Limit;
 			Position = source.Position;
-			Length = source.Length;
+		}
+
+		public CacheFileReader(CacheFileReader source, int limit) : this(source)
+		{
+			Limit = limit + source.Position;
+			Position = source.Position;
 		}
 		#endregion Constructors
 
-		#region Methods
+		#region Static Methods
 		public static bool operator ==(CacheFileReader lhs, CacheFileReader rhs)
 		{
-			if (lhs.Position == rhs.Position && lhs._cacheFile == rhs._cacheFile)
-				return true;
-			else
-				return false;
+			return (lhs.Buffer == rhs.Buffer && lhs.Position == rhs.Position);
 		}
 
 		public static bool operator !=(CacheFileReader lhs, CacheFileReader rhs)
 		{
 			return !(lhs == rhs);
 		}
-
-		public bool Advance(int len)
+		#endregion
+		#region Methods
+		public string DumpBuffer()
 		{
-			Position += len;
-			return AtEnd;
+			int col = 0;
+			StringBuilder fileBuilder = new StringBuilder();
+			foreach (byte b in Buffer)
+			{
+				if(col == 10)
+				{
+					fileBuilder.Append("\n");
+					col = 0;
+				}
+
+				fileBuilder.Append(b.ToString("x2").ToUpper());
+				fileBuilder.Append(" ");
+				col += 1;
+			}
+
+			return fileBuilder.ToString();
+		}
+
+		public override bool Equals(object obj)
+		{
+			return this == (CacheFileReader)obj;
+		}
+
+		public override int GetHashCode()
+		{
+			return Buffer.GetHashCode();
+		}
+
+		private byte GetByte()
+		{
+			return Buffer[Position];
+		}
+
+		private int GetBytes(byte[] destination, int count)
+		{
+			int copyLength;
+			if (Position + count < Length)
+				copyLength = count;
+			else
+				copyLength = Length - Position;
+
+			Array.Copy(Buffer, Position, destination, 0, copyLength);
+			return copyLength;
 		}
 
 
-		public virtual byte PeekByte()
+		public byte PeekByte()
 		{
-			return _cacheFile.Peek(Position);
+			return GetByte();
 		}
 
-		public virtual double PeekDouble()
+		public byte[] PeekBytes(int length)
 		{
-			byte[] bytes = new byte[8];
-			_cacheFile.Peek(bytes, Position, 8);
-			return BitConverter.ToDouble(bytes, 0);
+			byte[] temp = new byte[length];
+			GetBytes(temp, length);
+			return temp;
 		}
 
-		public virtual float PeekFloat()
+		public double PeekDouble()
 		{
-			byte[] bytes = new byte[4];
-			_cacheFile.Peek(bytes, Position, 4);
-			return BitConverter.ToSingle(bytes, 0);
+			byte[] temp = new byte[8];
+			GetBytes(temp, 8);
+			return BitConverter.ToDouble(temp, 0);
 		}
 
-		public virtual int PeekInt()
+		public float PeekFloat()
 		{
-			byte[] bytes = new byte[4];
-			_cacheFile.Peek(bytes, Position, 4);
-			return BitConverter.ToInt32(bytes, 0);
+			byte[] temp = new byte[4];
+			GetBytes(temp, 4);
+			return BitConverter.ToSingle(temp, 0);
 		}
 
-		public virtual int PeekShort()
+		public long PeekLong()
 		{
-			byte[] bytes = new byte[2];
-			_cacheFile.Peek(bytes, Position, 2);
-			return BitConverter.ToInt16(bytes, 0);
+			byte[] temp = new byte[8];
+			GetBytes(temp, 8);
+			return BitConverter.ToInt64(temp, 0);
 		}
 
-		public virtual string PeekString(int len)
+		public int PeekInt()
 		{
-			byte[] bytes = new byte[len];
-			_cacheFile.Peek(bytes, Position, len);
-			return Encoding.ASCII.GetString(bytes);
+			byte[] temp = new byte[4];
+			GetBytes(temp, 4);
+			return BitConverter.ToInt32(temp, 0);
+		}
+
+		public short PeekShort()
+		{
+			byte[] temp = new byte[2];
+			GetBytes(temp, 2);
+			return BitConverter.ToInt16(temp, 0);
+		}
+
+		public string PeekString(int length)
+		{
+			byte[] temp = new byte[length];
+			GetBytes(temp, length);
+			return Encoding.ASCII.GetString(temp);
 		}
 
 
 		public byte ReadByte()
 		{
-			byte r = PeekByte();
-			Advance(1);
-			return r;
+			byte temp = PeekByte();
+			Seek(1);
+			return temp;
+		}
+
+		public byte[] ReadBytes(int length)
+		{
+			byte[] temp = PeekBytes(length);
+			Seek(length);
+			return temp;
 		}
 
 		public double ReadDouble()
 		{
-			double r = PeekDouble();
-			Advance(8);
-			return r;
+			double temp = PeekDouble();
+			Seek(8);
+			return temp;
 		}
 
 		public float ReadFloat()
 		{
-			float r = PeekFloat();
-			Advance(4);
-			return r;
-		}
-
-		public int ReadInt()
-		{
-			int r = PeekInt();
-			Advance(4);
-			return r;
-		}
-
-		public int ReadShort()
-		{
-			int r = PeekShort();
-			Advance(2);
-			return r;
-		}
-
-		public string ReadString(int len)
-		{
-			string r = PeekString(len);
-			Advance(len);
-			return r;
+			float temp = PeekFloat();
+			Seek(4);
+			return temp;
 		}
 
 		public long ReadLong()
 		{
-			uint a = (uint)ReadInt();
-			uint b = (uint)ReadInt();
-			long r = (long)a | ((long)b << 32);
-			return r;
+			long temp = PeekLong();
+			Seek(8);
+			return temp;
+		}
+
+		public int ReadInt()
+		{
+			int temp = PeekInt();
+			Seek(4);
+			return temp;
+		}
+
+		public short ReadShort()
+		{
+			short temp = PeekShort();
+			Seek(2);
+			return temp;
+		}
+
+		public string ReadString(int length)
+		{
+			string temp = PeekString(length);
+			Seek(length);
+			return temp;
 		}
 
 
-		public void Seek(int pos)
+		public int Seek(int offset) { return Seek(offset, SeekOrigin.Current); }
+
+		public int Seek(int offset, SeekOrigin origin)
 		{
-			Position = pos;
+			switch (origin)
+			{
+				case SeekOrigin.Begin:
+					Position = offset;
+					break;
+				case SeekOrigin.Current:
+					Position += offset;
+					break;
+				case SeekOrigin.End:
+					Position = Limit - offset;
+					break;
+				default:
+					throw new IOException("Invalid origin");
+			}
+			return Position;
 		}
 		#endregion Methods
 	}

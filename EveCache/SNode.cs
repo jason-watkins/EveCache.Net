@@ -1,39 +1,134 @@
-﻿namespace EveCache
+﻿#region License
+/* EveCache.Net - C# EVE Cache File Reader Library
+ * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
+ *
+ * Based on libevecache
+ * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+#endregion
+
+namespace EveCache
 {
 	using System;
 	using System.Collections.Generic;
-	using System.Linq;
+	using System.IO;
 	using System.Text;
 
 	public class SNode
 	{
+		#region Static Fields
+		private static int __count;
+		private static Dictionary<int, bool> __nodeConsumed;
+		private static List<SNode> __nodes;
+		#endregion
 		#region Fields
-		private List<SNode> _Members;
+		private int __ID;
+		private SNodeContainer _Members;
 		private EStreamCode _Type;
 		#endregion Fields
 
 		#region Properties
-		public virtual List<SNode> Members { get { return _Members; } protected set { _Members = value; } }
+		public int _ID_ { get { return __ID; } set { __ID = value; } }
+		public virtual SNodeContainer Members { get { return _Members; } protected set { _Members = value; } }
 		public virtual EStreamCode Type { get { return _Type; } set { _Type = value; } }
 		#endregion Properties
 
 		#region Constructors
+		static SNode()
+		{
+			__count = 0;
+			__nodeConsumed = new Dictionary<int, bool>();
+			__nodes = new List<SNode>();
+		}
+
 		public SNode(EStreamCode t)
 		{
-			Members = new List<SNode>();
+			_ID_ = __count++;
+			__nodes.Add(this);
+			Members = new SNodeContainer();
 			Type = t;
 		}
 
 		public SNode(SNode source)
 		{
-			Members = new List<SNode>();
-			foreach (SNode node in source.Members)
-				Members.Add(node.Clone());
-
+			Members = new SNodeContainer(source.Members);
 			Type = source.Type;
 		}
 		#endregion Constructors
 
+		#region Static Methods
+		public static void DumpNodes(string fileName)
+		{
+			foreach (SNode node in __nodes)
+			{
+				__nodeConsumed[node._ID_] = false;
+			}
+
+			StringBuilder fileContents = new StringBuilder();
+			foreach (SNode n in __nodes)
+			{
+				if (__nodeConsumed[n._ID_])
+					continue;
+				if (n.Type == EStreamCode.EStreamStart)
+				{
+					__nodeConsumed[n._ID_] = true;
+					continue;
+				}
+
+				fileContents.Append(n.ToString());
+				fileContents.Append(String.Format("[{0:00}]\n", n._ID_));
+				fileContents.Append(DumpNode(n, 1));
+
+				__nodeConsumed[n._ID_] = true;
+			}
+			File.WriteAllText(fileName + ".txt", fileContents.ToString());
+		}
+
+		public static string DumpNode(SNode node, int offset)
+		{
+			if (node.Members.Length == 0)
+				return "";
+
+			StringBuilder sb = new StringBuilder();
+			sb.Append(WhiteSpace(offset - 1) + "(\n");
+			foreach (SNode n in node.Members)
+			{
+				sb.Append(WhiteSpace(offset));
+				sb.Append(n.ToString());
+				sb.Append(String.Format("[{0:00}]\n", n._ID_));
+				if (n.Members.Length > 0)
+					sb.Append(DumpNode(n, offset + 1));
+				__nodeConsumed[n._ID_] = true;
+			}
+			sb.Append(WhiteSpace(offset - 1) + ")\n");
+			return sb.ToString();
+		
+		}
+
+		private static string WhiteSpace(int count)
+		{
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < count; i++)
+				sb.Append("  ");
+			return sb.ToString();
+		}
+		#endregion
 		#region Methods
 		public virtual void AddMember(SNode node)
 		{
@@ -45,9 +140,9 @@
 			return new SNode(this);
 		}
 
-		public virtual string Repl()
+		public override string ToString()
 		{
-			return "<SNode type " + String.Format("0:x2", Type) + ">";
+			return "<SNode [" + Type.ToString() + "]>";
 		}
 		#endregion Methods
 	}
@@ -63,14 +158,14 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SStreamNode Clone()
+		public override SNode Clone()
 		{
 			return new SStreamNode(this);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SStreamNode> ";
+			return "<SStreamNode>";
 		}
 		#endregion Methods
 	}
@@ -82,12 +177,12 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SDBHeader Clone()
+		public override SNode Clone()
 		{
 			return new SDBHeader();
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
 			return "<SDBHeader>";
 		}
@@ -119,20 +214,20 @@
 		#region Methods
 		public override void AddMember(SNode node)
 		{
-			if (!(Members.Count < GivenLength))
+			if (!(Members.Length < GivenLength))
 				throw new SystemException();
 
 			Members.Add(node);
 		}
 
-		public override STuple Clone()
+		public override SNode Clone()
 		{
 			return new STuple(this);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <STuple> ";
+			return "<STuple>";
 		}
 		#endregion Methods
 	}
@@ -162,36 +257,34 @@
 		#region Methods
 		public override void AddMember(SNode node)
 		{
-			if (!(Members.Count < GivenLength))
+			if (!(Members.Length < GivenLength))
 				throw new SystemException();
 
 			Members.Add(node);
 		}
 
-		public override SDict Clone()
+		public override SNode Clone()
 		{
 			return new SDict(this);
 		}
 
-		public override SNode GetByName(string target)
+		public virtual SNode GetByName(string target)
 		{
-			if (Members.Count < 2 || (Members.Count & 1) > 0)
+			if (Members.Length < 2 || (Members.Length & 1) > 0)
 				return null;
 
-			LinkedList<SNode> linkedMembers = new LinkedList<SNode>(Members);
-			LinkedListNode<SNode> i = linkedMembers.First.Next;
-			for (; i.Next != linkedMembers.Last; i = i.Next.Next)
+			for (int i = 1; i < Members.Length; i += 2)
 			{
-				if (i.Value is SIdent && ((SIdent)i.Value).Value == target)
-					return i.Previous.Value;
+				if (Members[i] is SIdent && ((SIdent)Members[i]).Value == target)
+					return Members[i - 1];
 			}
 
 			return null;
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SDict> ";
+			return "<SDict>";
 		}
 		#endregion Methods
 	}
@@ -203,14 +296,14 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SNone Clone()
+		public override SNode Clone()
 		{
 			return new SNone();
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <NONE> ";
+			return "<NONE>";
 		}
 		#endregion Methods
 	}
@@ -233,23 +326,18 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SMarker Clone()
+		public override SNode Clone()
 		{
 			return new SMarker(this.ID);
-		}
-
-		public override string Repl()
-		{
-			return " <SMarker ID: " + ID + " '" + ToString() + "' > ";
 		}
 
 		public override string ToString()
 		{
 			string name = ColumnLookup.LookupName(ID);
 			if (name == string.Empty)
-				return "UNKNOWN:" + ID;
-			else
-				return name;
+				name = "UNKNOWN:" + ID;
+
+			return String.Format("<SMarker ID:{0} '{1}'>", ID, name);
 		}
 		#endregion Methods
 	}
@@ -272,14 +360,14 @@
 		#endregion Constructors
 
 		#region Methods
-		public virtual SIdent Clone()
+		public override SNode Clone()
 		{
 			return new SIdent(Value);
 		}
 
-		public virtual string Repl()
+		public override string ToString()
 		{
-			return " <SIdent '" + Value + "'> ";
+			return "<SIdent '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -302,19 +390,14 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SString Clone()
+		public override SNode Clone()
 		{
 			return new SString(Value);
 		}
 
-		public override string Repl()
-		{
-			return " <SString '" + Value + "'> ";
-		}
-
 		public override string ToString()
 		{
-			return Value;
+			return String.Format("<SString '{0}'>", Value);
 		}
 		#endregion Methods
 	}
@@ -332,19 +415,19 @@
 		#region Constructors
 		public SInt(int value) : base(EStreamCode.EInteger)
 		{
-			Value = Value;
+			Value = value;
 		}
 		#endregion Constructors
 
 		#region Methods
-		public override SInt Clone()
+		public override SNode Clone()
 		{
 			return new SInt(Value);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <Sint '" + Value + "'> ";
+			return "<SInt '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -367,14 +450,14 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SReal Clone()
+		public override SNode Clone()
 		{
 			return new SReal(Value);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SReal '" + Value + "'> ";
+			return "<SReal '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -397,14 +480,14 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SLong Clone()
+		public override SNode Clone()
 		{
 			return new SLong(Value);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SLongLong '" + Value + "'> ";
+			return "<SLongLong '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -417,13 +500,13 @@
 			get 
 			{
 				SNode current = this;
-				while (current.Members.Count > 0)
+				while (current.Members.Length > 0)
 					current = current.Members[0];
 
 				SString str = current as SString;
 
 				if (str != null)
-					return str.ToString();
+					return str.Value;
 
 				return string.Empty;
 			} 
@@ -432,17 +515,19 @@
 
 		#region Constructors
 		public SObject() : base(EStreamCode.EObject) { }
+
+		public SObject(SObject source) : base(source) { }
 		#endregion Constructors
 
 		#region Methods
-		public override SObject Clone()
+		public override SNode Clone()
 		{
-			return new SObject();
+			return new SObject(this);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SObject '" + Name + "' " + this + "> ";
+			return String.Format("<SObject '{0}' [{1:X4}]>", Name, _ID_);
 		}
 		#endregion Methods
 	}
@@ -465,14 +550,14 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SSubstream Clone()
+		public override SNode Clone()
 		{
 			return new SSubstream(Length);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SSubStream> ";
+			return "<SSubStream>";
 		}
 		#endregion Methods
 	}
@@ -501,18 +586,18 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SDBRow Clone()
+		public override SNode Clone()
 		{
 			return new SDBRow(ID, Data);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append(" <DBRow ");
+			sb.Append("<DBRow ");
 
 			for (int i = 0; i < Data.Count; i++)
-				sb.Append(String.Format("0:x2", Data[i]));
+				sb.Append(String.Format("{0:X2}", Data[i]));
 
 			if (IsLast)
 				sb.Append(" LAST");
@@ -530,12 +615,12 @@
 		#endregion Constructors
 
 		#region Methods
-		public override SDBRecords Clone()
+		public override SNode Clone()
 		{
 			return new SDBRecords();
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
 			return string.Empty;
 		}

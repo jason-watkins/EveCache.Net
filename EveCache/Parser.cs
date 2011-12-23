@@ -1,26 +1,52 @@
-﻿namespace EveCache
+﻿#region License
+/* EveCache.Net - C# EVE Cache File Reader Library
+ * Copyright (C) 2011 Jason Watkins <jason@blacksunsystems.net>
+ *
+ * Based on libevecache
+ * Copyright (C) 2009-2010  StackFoundry LLC and Yann Ramin
+ * http://dev.eve-central.com/libevecache/
+ * http://gitorious.org/libevecache
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+#endregion
+
+namespace EveCache
 {
 	using System;
 	using System.Collections.Generic;
-	using System.Linq;
 	using System.Text;
+	using System.IO;
+
 	public class Parser
 	{
 		#region Fields
 		private CacheFileReader _Reader;
-		private uint _ShareCount;
-		private uint _ShareCursor;
-		SNode[] _ShareObj;
-		uint[] _ShareMap;
+		private int _ShareCount;
+		private int _ShareCursor;
+		private SNode[] _ShareObj;
+		private int[] _ShareMap;
 		private List<SNode> _Streams;
 		#endregion Fields
 
 		#region Properties
 		private CacheFileReader Reader { get { return _Reader; } set { _Reader = value; } }
-		private uint ShareCount { get { return _ShareCount; } set { _ShareCount = value; } }
-		private uint ShareCursor { get { return _ShareCursor; } set { _ShareCursor = value; } }
+		private int ShareCount { get { return _ShareCount; } set { _ShareCount = value; } }
+		private int ShareCursor { get { return _ShareCursor; } set { _ShareCursor = value; } }
 		private SNode[] ShareObj { get { return _ShareObj; } set { _ShareObj = value; } }
-		private uint[] ShareMap { get { return _ShareMap; } set { _ShareMap = value; } }
+		private int[] ShareMap { get { return _ShareMap; } set { _ShareMap = value; } }
 		public List<SNode> Streams { get { return _Streams; } private set { _Streams = value; } }
 		#endregion Properties
 
@@ -28,21 +54,23 @@
 		#endregion Events
 
 		#region Constructors
-		public Parser(CacheFileReader iter)
+		public Parser(CacheFileReader reader)
 		{
-			Reader = iter;
+			Reader = reader;
 			ShareCount = 0;
 			ShareCursor = 0;
 			ShareObj = null;
 			ShareMap = null;
+
+			Streams = new List<SNode>();
 		}
 		#endregion Constructors
 
 		#region Static Methods
-		public static void rle_unpack(byte[] in_buf, int in_length, List<byte> buffer)
+		public static void rle_unpack(byte[] in_buf,  List<byte> buffer)
 		{
 			buffer.Clear();
-			if (in_length == 0)
+			if (in_buf.Length == 0)
 				return;
 
 			int i = 0;
@@ -51,23 +79,27 @@
 				Packer_Opcap opcap = new Packer_Opcap(in_buf[i++]);
 				if (opcap.tzero)
 				{
-					for (int count = opcap.tlen + 1; count > 0; count--)
+					byte count = (byte)(opcap.tlen + 1);
+					for (; count > 0; count--)
 						buffer.Add(0);
 				}
 				else
 				{
-					for (int count = 8 - opcap.tlen; count > 0; count--)
+					byte count = (byte)(8 - opcap.tlen);
+					for (; count > 0; count--)
 						buffer.Add(in_buf[i++]);
 				}
 
 				if (opcap.bzero)
 				{
-					for (int count = opcap.blen + 1; count > 0; count--)
+					byte count = (byte)(opcap.blen + 1);
+					for (; count > 0; count--)
 						buffer.Add(0);
 				}
 				else
 				{
-					for (int count = 8 - opcap.blen; count > 0; count--)
+					byte count = (byte)(8 - opcap.blen);
+					for (; count > 0; count--)
 						buffer.Add(in_buf[i++]);
 				}
 			}
@@ -88,42 +120,43 @@
 			STuple fields = head.Members[0].Members[1].Members[0] as STuple;
 
 			int len = GetLength();
-			string compdata = Reader.ReadString(len);
-			byte[] olddata = Encoding.ASCII.GetBytes(compdata);
+			byte[] olddata = Reader.ReadBytes(len);
 
 			List<byte> newdata = new List<byte>();
-			rle_unpack(olddata, olddata.Length, newdata);
+			rle_unpack(olddata, newdata);
 			SNode body = new SDBRow(17, newdata);
 
-			CacheFile cf = new CacheFile(newdata);
-			CacheFileReader blob = cf.Begin;
+			CacheFileReader blob = new CacheFileReader(newdata.ToArray());
 
 			SDict dict = new SDict(999999); // TODO: need dynamic sized dict
 			int step = 1;
 			while (step < 6)
 			{
-				foreach (SNode vi in fields.Members)
+				foreach (SNode field in fields.Members)
 				{
-					SNode fn = vi.Members[0].Clone();
-					SInt ft = (SInt)vi.Members[1];
-					int fti = ft.Value;
+					SNode fieldName = field.Members[0];
+					SInt fieldType = field.Members[1] as SInt;
+					int fieldTypeInt = fieldType.Value;
 
 					byte boolcount = 0;
 					byte boolbuf = 0;
 					SNode obj = null;
-					switch (fti)
+					switch (fieldTypeInt)
 					{
 						case 2: // 16bit int
-							obj = new SInt(blob.ReadShort());
+							if(step == 3)
+								obj = new SInt(blob.ReadShort());
 							break;
 						case 3: // 32bit int
-							obj = new SInt(blob.ReadInt());
+							if (step == 2)
+								obj = new SInt(blob.ReadInt());
 							break;
 						case 4:
 							obj = new SReal(blob.ReadFloat());
 							break;
 						case 5: // double
-							obj = new SReal(blob.ReadDouble());
+							if(step == 1)
+								obj = new SReal(blob.ReadDouble());
 							break;
 						case 6: // currency
 							if (step == 1)
@@ -165,13 +198,13 @@
 							obj = new SString("I can't parse strings yet - be patient");
 							break;
 						default:
-							throw new ParseException("Unhandled ADO type " + fti);
+							throw new ParseException("Unhandled ADO type " + fieldTypeInt);
 					}
 
 					if (obj != null)
 					{
 						dict.AddMember(obj);
-						dict.AddMember(fn);
+						dict.AddMember(fieldName.Clone());
 					}
 				}
 
@@ -199,10 +232,10 @@
 			{
 				while (!Reader.AtEnd)
 				{
-					byte check = Reader.ReadByte();
+					EStreamCode check = (EStreamCode)Reader.ReadByte();
 					SNode stream = new SNode(EStreamCode.EStreamStart);
 					
-					if (check != (byte)EStreamCode.EStreamStart)
+					if (check != EStreamCode.EStreamStart)
 						continue;
 
 					Streams.Add(stream);
@@ -232,7 +265,7 @@
 
 		protected SNode ParseOne()
 		{
-			byte check;
+			EStreamCode check;
 			byte isshared = 0;
 			SNode thisobj = null;
 			SDBRow lastDbRow = null;
@@ -240,7 +273,7 @@
 			try
 			{
 				byte type = Reader.ReadByte();
-				check = (byte)(type & 0x3f);
+				check = (EStreamCode)(type & 0x3f);
 				isshared = (byte)(type & 0x40);
 			}
 			catch (EndOfFileException)
@@ -248,7 +281,8 @@
 				return null;
 			}
 
-			switch ((EStreamCode)check)
+			#region EStreamCode Switch
+			switch (check)
 			{
 				case EStreamCode.EStreamStart:
 					break;
@@ -376,8 +410,7 @@
 				case EStreamCode.ESubstream:
 					{
 						int len = GetLength();
-						CacheFileReader readerSub = new CacheFileReader(Reader);
-						readerSub.Length = len;
+						CacheFileReader readerSub = new CacheFileReader(Reader, len);
 						SSubstream ss = new SSubstream(len);
 						thisobj = ss;
 						Parser sp = new Parser(readerSub);
@@ -385,7 +418,7 @@
 						for (int i = 0; i < sp.Streams.Count; i++)
 							ss.AddMember(sp.Streams[i].Clone());
 
-						Reader.Seek(readerSub.Position);
+						Reader.Seek(readerSub.Position, SeekOrigin.Begin);
 						break;
 					}
 				case EStreamCode.E2Tuple:
@@ -422,10 +455,10 @@
 				case 0:
 					break;
 				default:
-					throw new ParseException("Can't identify type " + String.Format("{0:0x2}", check) +
-											" at position " + String.Format("{0:0x2}", Reader.Position) + " limit " + Reader.Length);
-
+					throw new ParseException("Can't identify type " + String.Format("{0:x2}", (int)check) +
+											" at position " + String.Format("{0:x2}", Reader.Position) + " limit " + Reader.Length);
 			}
+			#endregion
 
 			if (thisobj == null)
 				throw new ParseException("no thisobj in parseone");
@@ -446,7 +479,7 @@
 				throw new ParseException("Uninitialized share");
 			if (ShareCursor >= ShareCount)
 				throw new ParseException("cursor out of range");
-			uint shareid = ShareMap[ShareCursor];
+			int shareid = ShareMap[ShareCursor];
 			if (shareid > ShareCount)
 				throw new ParseException("shareid out of range");
 
@@ -467,41 +500,38 @@
 			return ShareObj[id].Clone();
 		}
 
-		protected uint ShareInit()
+		protected int ShareInit()
 		{
 			int shares = Reader.ReadInt();
-			if (shares >= 16384) // Some large number
+			if ((uint)shares >= 16384) // Some large number
 				return 0;
 
-			int shareskip = 0;
+			int shareSkip = 0;
 			if (shares != 0)
 			{
-				ShareMap = new uint[shares + 1];
+				ShareMap = new int[shares + 1];
 				ShareObj = new SNode[shares + 1];
 
-				shareskip = 4 * shares;
-				int opos = Reader.Position;
-				int olim = Reader.Length;
-				Reader.Seek(opos + olim - shareskip);
-				int i;
-				for (i = 0; i < shares; i++)
+				shareSkip = 4 * shares;
+				int oPosition = Reader.Position;
+				int oLimit = Reader.Limit;
+				Reader.Seek(shareSkip, SeekOrigin.End);
+				for (int i = 0; i < shares; i++)
 				{
-					ShareMap[i] = (uint)Reader.ReadInt();
-					ShareObj[i] = null;
+					ShareMap[i] = Reader.ReadInt();
 				}
-				ShareObj[shares] = null;
 				ShareMap[shares] = 0;
 
-				Reader.Seek(opos);
-				Reader.Length = olim - shareskip;
+				Reader.Seek(oPosition, SeekOrigin.Begin);
+				Reader.Limit = oLimit - shareSkip;
 			}
-			ShareCount = (uint)shares;
-			return (uint)shares;
+			ShareCount = shares;
+			return shares;
 		}
 
 		protected void ShareSkip()
 		{
-			Reader.Advance((int)(ShareCount * 4));
+			Reader.Seek(ShareCount * 4);
 		}
 		#endregion Methods
 	}
