@@ -84,16 +84,16 @@ namespace EveCache
 				return "";
 
 			StringBuilder sb = new StringBuilder();
-			sb.Append("(\n".PadLeft(2 * (offset - 1)));
+			sb.Append("(\n".PadLeft(2 * offset));
 			foreach (SNode n in node.Members)
 			{
-				sb.Append(n.ToString().PadLeft(2 * offset));
+				sb.Append(n.ToString().PadLeft((2 * offset) + n.ToString().Length));
 				sb.Append(String.Format("[{0:00}]\n", n.__id__));
 				if (n.Members.Length > 0)
 					sb.Append(DumpNode(n, offset + 1));
 				__nodeConsumed__[n.__id__] = true;
 			}
-			sb.Append(")\n".PadLeft(2 * (offset - 1)));
+			sb.Append(")\n".PadLeft(2 * offset));
 
 			return sb.ToString();
 		}

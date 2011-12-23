@@ -35,7 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 [assembly: AssemblyProduct("EveCache.Net")]
 [assembly: AssemblyCopyright("Copyright (C) 2011 Jason Watkins")]
 [assembly: AssemblyTrademark("")]
-[assembly: AssemblyCulture("en")]
+[assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
