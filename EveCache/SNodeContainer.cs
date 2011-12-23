@@ -62,10 +62,8 @@
 			{
 				get
 				{
-					if (Position < 0)
-						return Data[0];
-					else if (Position >= Data.Count)
-						return Data[Data.Count - 1];
+					if (Position < 0 || Position >= Data.Count)
+						throw new InvalidOperationException();
 					else
 						return Data[Position];
 				}
@@ -84,15 +82,7 @@
 			public int Position
 			{
 				get { return _Position; }
-				set
-				{
-					if (value < 0)
-						_Position = 0;
-					else if (value >= Data.Count)
-						_Position = Data.Count - 1;
-					else
-						_Position = value;
-				}
+				set { _Position = value; }
 			}
 			public SNode Previous
 			{
@@ -111,7 +101,7 @@
 			public Iterator(SNodeContainer parent)
 			{
 				Data = parent._Data;
-				Position = 0;
+				Position = -1;
 			}
 			#endregion Constructors
 

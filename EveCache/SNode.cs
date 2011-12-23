@@ -32,19 +32,35 @@ namespace EveCache
 
 	public class SNode
 	{
+		#region Static Fields
+		private static int __count;
+		private static Dictionary<int, bool> __nodeConsumed;
+		private static List<SNode> __nodes;
+		#endregion
 		#region Fields
+		private int __ID;
 		private SNodeContainer _Members;
 		private EStreamCode _Type;
 		#endregion Fields
 
 		#region Properties
+		public int _ID_ { get { return __ID; } set { __ID = value; } }
 		public virtual SNodeContainer Members { get { return _Members; } protected set { _Members = value; } }
 		public virtual EStreamCode Type { get { return _Type; } set { _Type = value; } }
 		#endregion Properties
 
 		#region Constructors
+		static SNode()
+		{
+			__count = 0;
+			__nodeConsumed = new Dictionary<int, bool>();
+			__nodes = new List<SNode>();
+		}
+
 		public SNode(EStreamCode t)
 		{
+			_ID_ = __count++;
+			__nodes.Add(this);
 			Members = new SNodeContainer();
 			Type = t;
 		}
@@ -56,6 +72,63 @@ namespace EveCache
 		}
 		#endregion Constructors
 
+		#region Static Methods
+		public static void DumpNodes(string fileName)
+		{
+			foreach (SNode node in __nodes)
+			{
+				__nodeConsumed[node._ID_] = false;
+			}
+
+			StringBuilder fileContents = new StringBuilder();
+			foreach (SNode n in __nodes)
+			{
+				if (__nodeConsumed[n._ID_])
+					continue;
+				if (n.Type == EStreamCode.EStreamStart)
+				{
+					__nodeConsumed[n._ID_] = true;
+					continue;
+				}
+
+				fileContents.Append(n.ToString());
+				fileContents.Append(String.Format("[{0:00}]\n", n._ID_));
+				fileContents.Append(DumpNode(n, 1));
+
+				__nodeConsumed[n._ID_] = true;
+			}
+			File.WriteAllText(fileName + ".txt", fileContents.ToString());
+		}
+
+		public static string DumpNode(SNode node, int offset)
+		{
+			if (node.Members.Length == 0)
+				return "";
+
+			StringBuilder sb = new StringBuilder();
+			sb.Append(WhiteSpace(offset - 1) + "(\n");
+			foreach (SNode n in node.Members)
+			{
+				sb.Append(WhiteSpace(offset));
+				sb.Append(n.ToString());
+				sb.Append(String.Format("[{0:00}]\n", n._ID_));
+				if (n.Members.Length > 0)
+					sb.Append(DumpNode(n, offset + 1));
+				__nodeConsumed[n._ID_] = true;
+			}
+			sb.Append(WhiteSpace(offset - 1) + ")\n");
+			return sb.ToString();
+		
+		}
+
+		private static string WhiteSpace(int count)
+		{
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < count; i++)
+				sb.Append("  ");
+			return sb.ToString();
+		}
+		#endregion
 		#region Methods
 		public virtual void AddMember(SNode node)
 		{
@@ -67,9 +140,9 @@ namespace EveCache
 			return new SNode(this);
 		}
 
-		public virtual string Repl()
+		public virtual string ToString()
 		{
-			return " <SNode type " + String.Format("0:x2", Type) + "> ";
+			return "<SNode [" + Type.ToString() + "]>";
 		}
 		#endregion Methods
 	}
@@ -90,9 +163,9 @@ namespace EveCache
 			return new SStreamNode(this);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SStreamNode> ";
+			return "<SStreamNode>";
 		}
 		#endregion Methods
 	}
@@ -109,7 +182,7 @@ namespace EveCache
 			return new SDBHeader();
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
 			return "<SDBHeader>";
 		}
@@ -152,9 +225,9 @@ namespace EveCache
 			return new STuple(this);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <STuple> ";
+			return "<STuple>";
 		}
 		#endregion Methods
 	}
@@ -215,9 +288,9 @@ namespace EveCache
 			return null;
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SDict> ";
+			return "<SDict>";
 		}
 		#endregion Methods
 	}
@@ -234,9 +307,9 @@ namespace EveCache
 			return new SNone();
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <NONE> ";
+			return "<NONE>";
 		}
 		#endregion Methods
 	}
@@ -264,18 +337,13 @@ namespace EveCache
 			return new SMarker(this.ID);
 		}
 
-		public override string Repl()
-		{
-			return " <SMarker ID: " + ID + " '" + ToString() + "' > ";
-		}
-
 		public override string ToString()
 		{
 			string name = ColumnLookup.LookupName(ID);
 			if (name == string.Empty)
-				return "UNKNOWN:" + ID;
-			else
-				return name;
+				name = "UNKNOWN:" + ID;
+
+			return String.Format("<SMarker ID:{0} '{1}'>", ID, name);
 		}
 		#endregion Methods
 	}
@@ -303,9 +371,9 @@ namespace EveCache
 			return new SIdent(Value);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SIdent '" + Value + "'> ";
+			return "<SIdent '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -333,14 +401,9 @@ namespace EveCache
 			return new SString(Value);
 		}
 
-		public override string Repl()
-		{
-			return " <SString '" + Value + "'> ";
-		}
-
 		public override string ToString()
 		{
-			return Value;
+			return String.Format("<SString '{0}'>", Value);
 		}
 		#endregion Methods
 	}
@@ -358,7 +421,7 @@ namespace EveCache
 		#region Constructors
 		public SInt(int value) : base(EStreamCode.EInteger)
 		{
-			Value = Value;
+			Value = value;
 		}
 		#endregion Constructors
 
@@ -368,9 +431,9 @@ namespace EveCache
 			return new SInt(Value);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <Sint '" + Value + "'> ";
+			return "<SInt '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -398,9 +461,9 @@ namespace EveCache
 			return new SReal(Value);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SReal '" + Value + "'> ";
+			return "<SReal '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -428,9 +491,9 @@ namespace EveCache
 			return new SLong(Value);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SLongLong '" + Value + "'> ";
+			return "<SLongLong '" + Value + "'>";
 		}
 		#endregion Methods
 	}
@@ -449,7 +512,7 @@ namespace EveCache
 				SString str = current as SString;
 
 				if (str != null)
-					return str.ToString();
+					return str.Value;
 
 				return string.Empty;
 			} 
@@ -458,17 +521,19 @@ namespace EveCache
 
 		#region Constructors
 		public SObject() : base(EStreamCode.EObject) { }
+
+		public SObject(SObject source) : base(source) { }
 		#endregion Constructors
 
 		#region Methods
 		public override SNode Clone()
 		{
-			return new SObject();
+			return new SObject(this);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SObject '" + Name + "' " + this + "> ";
+			return String.Format("<SObject '{0}' [{1:X4}]>", Name, _ID_);
 		}
 		#endregion Methods
 	}
@@ -496,9 +561,9 @@ namespace EveCache
 			return new SSubstream(Length);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
-			return " <SSubStream> ";
+			return "<SSubStream>";
 		}
 		#endregion Methods
 	}
@@ -532,13 +597,13 @@ namespace EveCache
 			return new SDBRow(ID, Data);
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append(" <DBRow ");
+			sb.Append("<DBRow ");
 
 			for (int i = 0; i < Data.Count; i++)
-				sb.Append(String.Format("0:x2", Data[i]));
+				sb.Append(String.Format("{0:X2}", Data[i]));
 
 			if (IsLast)
 				sb.Append(" LAST");
@@ -561,7 +626,7 @@ namespace EveCache
 			return new SDBRecords();
 		}
 
-		public override string Repl()
+		public override string ToString()
 		{
 			return string.Empty;
 		}

@@ -2,6 +2,8 @@
 {
 	using System;
 	using System.Collections.Generic;
+	using System.IO;
+	using System.Text;
 	using EveCache;
 
 	static class Program
@@ -14,30 +16,32 @@
 			}
 		}
 
-		static void dump(SNodeContainer stream, int level)
+		static string dump(SNodeContainer stream, int level)
 		{
+			StringBuilder sb = new StringBuilder();
 			foreach (SNode node in stream)
 			{
 				nspaces(level);
-				Console.WriteLine("" + node.Repl() +  " ");
+				sb.Append(" " + node.ToString() +  " ");
 				if (node.Members.Length > 0) 
 				{ // generic catch all members with nested members
 					SNode sn = node;
 					SNodeContainer ste = sn.Members;
 					nspaces(level);
-					Console.WriteLine(" (");
+					sb.Append(" (");
 
-					dump(ste, level + 1);
+					sb.Append(dump(ste, level + 1));
 
 					nspaces(level);
-					Console.WriteLine(" )");
+					sb.Append(" )");
 				}
 			}
-
+			return sb.ToString();
 		}
 
-		static void market(SNodeContainer nodeMembers)
+		static string market(SNodeContainer nodeMembers)
 		{
+			StringBuilder sb = new StringBuilder();
 			MarketParser mp = new MarketParser(nodeMembers);
 			try
 			{
@@ -45,29 +49,30 @@
 			} 
 			catch (ParseException e)
 			{
-				Console.WriteLine("Not a valid orders file due to " + e.Message);
-				return;
+				sb.Append("Not a valid orders file due to " + e.Message);
+				return null;
 			}
 			MarketList list = mp.List;
 
 			DateTime t = list.TimeStamp;
 
 			string timeString = t.ToString("{0:yyyy-mm-dd HH:mm:ss}");
-			Console.WriteLine("MarketList for region " + list.Region + " and type " + list.Type + 
+			sb.Append("MarketList for region " + list.Region + " and type " + list.Type + 
 								" at time " + timeString + " " + list.TimeStamp.Ticks);
 
-			Console.WriteLine("price,volRemaining,typeID,range,orderID,volEntered,minVolume,bid,issued,duration,stationID,regionID,solarSystemID,jumps,");
+			sb.Append("price,volRemaining,typeID,range,orderID,volEntered,minVolume,bid,issued,duration,stationID,regionID,solarSystemID,jumps,");
 
 			List<MarketOrder> buy = list.BuyOrders;
 			List<MarketOrder> sell = list.SellOrders;
 			foreach (MarketOrder o in sell)
 			{
-				Console.WriteLine(o.ToCsv());
+				sb.Append(o.ToCsv());
 			}
 			foreach (MarketOrder o in buy)
 			{
-				Console.WriteLine(o.ToCsv());
+				sb.Append(o.ToCsv());
 			}
+			return sb.ToString();
 		}
 
 		static int Main(string[] args)
@@ -113,14 +118,14 @@
 
 				Parser parser = new Parser(cfr);
 
-				//try
+				try
 				{
 					parser.Parse();
 				}
-				//catch (ParseException e)
-				//{
-				//    Console.WriteLine("Parse exception " + e.Message);		
-				//}
+				catch (ParseException e)
+				{
+				    Console.WriteLine("Parse exception " + e.Message);		
+				}
 
 				if (dumpStructure)
 				{
@@ -128,7 +133,7 @@
 					for (int i = 0; i < parser.Streams.Count; i++)
 					{
 						SNodeContainer streams = parser.Streams[i].Members;
-						dump(streams, 0);
+						File.WriteAllText(Path.ChangeExtension(fileName, ".structure"), dump(streams, 0));
 					}
 				}
 				if (dumpMarket)
@@ -136,7 +141,7 @@
 					for (int i = 0; i < parser.Streams.Count; i++)
 					{
 						SNode snode = parser.Streams[i];
-						market(snode.Members);
+						File.WriteAllText(Path.ChangeExtension(fileName, ".market"),market(snode.Members));
 					}
 				}
 				Console.WriteLine();

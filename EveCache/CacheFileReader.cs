@@ -43,13 +43,13 @@ namespace EveCache
 		#endregion Fields
 
 		#region Properties
-		public bool AtEnd { get { return !(Position < Length); } }
+		public bool AtEnd { get { return !(Position < Limit); } }
 		private byte[] Buffer { get { return _Buffer; } set { _Buffer = value; } }
 		public string FileName { get { return _FileName; } private set { _FileName = value; } }
 		public int Length { get { return _Buffer.Length; } }
 		public int Limit
 		{
-			get { return _setLimit ? _Limit : Length; }
+			get { return _setLimit ? _Limit : Length - 16; }
 			set
 			{
 				_Limit = value <= Length ? value : Length;
@@ -63,8 +63,8 @@ namespace EveCache
 			{
 				if (value < 0)
 					_Position = 0;
-				else if (value >= Limit)
-					_Position = Limit - 1;
+				else if (value >= Length)
+					_Position = Length;
 				else
 					_Position = value;
 			}
@@ -118,6 +118,26 @@ namespace EveCache
 		}
 		#endregion
 		#region Methods
+		public string DumpBuffer()
+		{
+			int col = 0;
+			StringBuilder fileBuilder = new StringBuilder();
+			foreach (byte b in Buffer)
+			{
+				if(col == 10)
+				{
+					fileBuilder.Append("\n");
+					col = 0;
+				}
+
+				fileBuilder.Append(b.ToString("x2").ToUpper());
+				fileBuilder.Append(" ");
+				col += 1;
+			}
+
+			return fileBuilder.ToString();
+		}
+
 		public override bool Equals(object obj)
 		{
 			return this == (CacheFileReader)obj;
@@ -149,6 +169,13 @@ namespace EveCache
 		public byte PeekByte()
 		{
 			return GetByte();
+		}
+
+		public byte[] PeekBytes(int length)
+		{
+			byte[] temp = new byte[length];
+			GetBytes(temp, length);
+			return temp;
 		}
 
 		public double PeekDouble()
@@ -198,6 +225,13 @@ namespace EveCache
 		{
 			byte temp = PeekByte();
 			Seek(1);
+			return temp;
+		}
+
+		public byte[] ReadBytes(int length)
+		{
+			byte[] temp = PeekBytes(length);
+			Seek(length);
 			return temp;
 		}
 
@@ -257,7 +291,7 @@ namespace EveCache
 					Position += offset;
 					break;
 				case SeekOrigin.End:
-					Position = Limit - offset - 1;
+					Position = Limit - offset;
 					break;
 				default:
 					throw new IOException("Invalid origin");
