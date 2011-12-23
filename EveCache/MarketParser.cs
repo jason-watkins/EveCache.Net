@@ -42,22 +42,19 @@ namespace EveCache
 		#endregion Properties
 
 		#region Constructors
-		public MarketParser(SNodeContainer stream)
+		public MarketParser(SNode stream)
 		{
-			Stream = stream;
+			List = new MarketList();
+			Stream = new SNodeContainer();
+			Stream.Add(stream);
 			Valid = false;
 		}
 
 		public MarketParser(string fileName)
 		{
-			try
-			{ 
-				InitWithFile(fileName); 
-			}
-			catch (ParseException)
-			{ 
-				return; 
-			}
+			List = new MarketList();
+			try { InitWithFile(fileName); }
+			catch (ParseException) { return; }
 		}
 		#endregion Constructors
 
@@ -103,7 +100,7 @@ namespace EveCache
 				throw new ParseException("Can't read file timestamp");
 
 			Console.WriteLine("TS: " + time.Value);
-			List.TimeStamp = new DateTime(time.Value);
+			List.TimeStamp = new DateTime(time.Value + 504911232000000000);
 
 			SNode obj = baseNode.Members[1].Members[0];
 			if (obj == null)

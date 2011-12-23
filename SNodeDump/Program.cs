@@ -11,23 +11,26 @@
 	{
 		static void Main(string[] args)
 		{
-			string fileName = "4b51.cache";
-			string pathName = "../../../TestFiles/" + fileName;
-			CacheFileReader cfr;
-			cfr = new CacheFileReader(pathName);
-			Parser parser = new Parser(cfr);
-			//File.WriteAllText("dump.txt", cfr.DumpBuffer());
-
-			try
+			//string fileName = "4b51.cache";
+			//string pathName = "../../../TestFiles/" + fileName;
+			foreach (string pathName in Directory.GetFiles("../../../TestFiles/New/"))
 			{
-				parser.Parse();
-			}
-			catch (ParseException e)
-			{
-				Console.WriteLine("Parse exception " + e.Message);
-			}
+				CacheFileReader cfr;
+				cfr = new CacheFileReader(pathName);
+				Parser parser = new Parser(cfr);
+				//File.WriteAllText("dump.txt", cfr.DumpBuffer());
 
-			SNode.DumpNodes(fileName);
+				try
+				{
+					parser.Parse();
+				}
+				catch (ParseException e)
+				{
+					Console.WriteLine("Parse exception " + e.Message);
+				}
+
+				SNode.DumpNodes(Path.GetFileName(pathName));
+			}
 		}
 	}
 }

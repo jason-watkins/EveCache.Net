@@ -140,7 +140,7 @@ namespace EveCache
 			return new SNode(this);
 		}
 
-		public virtual string ToString()
+		public override string ToString()
 		{
 			return "<SNode [" + Type.ToString() + "]>";
 		}
@@ -273,16 +273,10 @@ namespace EveCache
 			if (Members.Length < 2 || (Members.Length & 1) > 0)
 				return null;
 
-			SNodeContainer.Iterator iterator = Members.GetIterator();
-			iterator.Seek(1);
-			SNode n = iterator.Current;
-			while (n != Members.Last)
+			for (int i = 1; i < Members.Length; i += 2)
 			{
-				if (n is SIdent && ((SIdent)n).Value == target)
-					return iterator.Previous;
-
-				iterator.Seek(2);
-				n = iterator.Current;
+				if (Members[i] is SIdent && ((SIdent)Members[i]).Value == target)
+					return Members[i - 1];
 			}
 
 			return null;

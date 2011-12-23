@@ -8,12 +8,14 @@
 
 	static class Program
 	{
-		static void nspaces(int n)
+		static string nspaces(int n)
 		{
 			n *= 2;
-			for (int i = 0; i < n; i++) {
-				Console.Write(" "); // horrendously inefficient 4tw
-			}
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < n; i++) 
+				sb.Append(" "); // horrendously inefficient 4tw
+
+			return sb.ToString();
 		}
 
 		static string dump(SNodeContainer stream, int level)
@@ -21,28 +23,27 @@
 			StringBuilder sb = new StringBuilder();
 			foreach (SNode node in stream)
 			{
-				nspaces(level);
-				sb.Append(" " + node.ToString() +  " ");
+				sb.Append(nspaces(level));
+				sb.Append(" " + node.ToString() +  " \n");
 				if (node.Members.Length > 0) 
 				{ // generic catch all members with nested members
-					SNode sn = node;
-					SNodeContainer ste = sn.Members;
-					nspaces(level);
-					sb.Append(" (");
+					SNodeContainer ste = node.Members;
+					sb.Append(nspaces(level));
+					sb.Append(" (\n");
 
 					sb.Append(dump(ste, level + 1));
 
-					nspaces(level);
-					sb.Append(" )");
+					sb.Append(nspaces(level));
+					sb.Append(" )\n");
 				}
 			}
 			return sb.ToString();
 		}
 
-		static string market(SNodeContainer nodeMembers)
+		static string market(SNode start)
 		{
 			StringBuilder sb = new StringBuilder();
-			MarketParser mp = new MarketParser(nodeMembers);
+			MarketParser mp = new MarketParser(start);
 			try
 			{
 				mp.Parse();
@@ -56,21 +57,21 @@
 
 			DateTime t = list.TimeStamp;
 
-			string timeString = t.ToString("{0:yyyy-mm-dd HH:mm:ss}");
+			string timeString = t.ToString("yyyy-MM-dd HH:mm:ss");
 			sb.Append("MarketList for region " + list.Region + " and type " + list.Type + 
-								" at time " + timeString + " " + list.TimeStamp.Ticks);
+								" at time " + timeString + "\n");
 
-			sb.Append("price,volRemaining,typeID,range,orderID,volEntered,minVolume,bid,issued,duration,stationID,regionID,solarSystemID,jumps,");
+			sb.Append("price,volRemaining,typeID,range,orderID,volEntered,minVolume,bid,issued,duration,stationID,regionID,solarSystemID,jumps,\n");
 
 			List<MarketOrder> buy = list.BuyOrders;
 			List<MarketOrder> sell = list.SellOrders;
 			foreach (MarketOrder o in sell)
 			{
-				sb.Append(o.ToCsv());
+				sb.Append(o.ToCsv() + "\n");
 			}
 			foreach (MarketOrder o in buy)
 			{
-				sb.Append(o.ToCsv());
+				sb.Append(o.ToCsv() + "\n");
 			}
 			return sb.ToString();
 		}
@@ -141,7 +142,7 @@
 					for (int i = 0; i < parser.Streams.Count; i++)
 					{
 						SNode snode = parser.Streams[i];
-						File.WriteAllText(Path.ChangeExtension(fileName, ".market"),market(snode.Members));
+						File.WriteAllText(Path.ChangeExtension(fileName, ".market"),market(snode));
 					}
 				}
 				Console.WriteLine();
