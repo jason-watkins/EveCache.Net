@@ -113,7 +113,7 @@ namespace EveCache
 		{
 			CacheFileReader cfReader = new CacheFileReader(fileName);
 
-			Parser parser = new Parser(cfReader);
+			CacheFileParser parser = new CacheFileParser(cfReader);
 			parser.Parse();
 			SNode sNode = parser.Streams[0];
 			Stream = sNode.Members;

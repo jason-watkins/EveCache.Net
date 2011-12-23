@@ -8,38 +8,6 @@
 
 	static class Program
 	{
-		static string nspaces(int n)
-		{
-			n *= 2;
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < n; i++) 
-				sb.Append(" "); // horrendously inefficient 4tw
-
-			return sb.ToString();
-		}
-
-		static string dump(SNodeContainer stream, int level)
-		{
-			StringBuilder sb = new StringBuilder();
-			foreach (SNode node in stream)
-			{
-				sb.Append(nspaces(level));
-				sb.Append(" " + node.ToString() +  " \n");
-				if (node.Members.Length > 0) 
-				{ // generic catch all members with nested members
-					SNodeContainer ste = node.Members;
-					sb.Append(nspaces(level));
-					sb.Append(" (\n");
-
-					sb.Append(dump(ste, level + 1));
-
-					sb.Append(nspaces(level));
-					sb.Append(" )\n");
-				}
-			}
-			return sb.ToString();
-		}
-
 		static string market(SNode start)
 		{
 			StringBuilder sb = new StringBuilder();
@@ -80,7 +48,7 @@
 		{
 			if (args.Length < 1)
 			{
-				Console.WriteLine("Syntax: " + Environment.CommandLine + " [options] [filenames+]");
+				Console.WriteLine("Syntax: " + Path.GetFileName(Environment.CommandLine) + " [options] [filenames+]");
 				Console.WriteLine("Options: --market       Digest a market order file, converting it to a .CSV file");
 				Console.WriteLine("         --structure    Print an AST of the cache file");
 				return -1;
@@ -117,26 +85,22 @@
 				try { cfr = new CacheFileReader(fileName); }
 				catch (System.IO.FileNotFoundException) { continue; }
 
-				Parser parser = new Parser(cfr);
+				CacheFileParser parser = new CacheFileParser(cfr);
 
 				try
 				{
+					Console.Write("Processing {0}... ", fileName);
 					parser.Parse();
+					Console.WriteLine("SUCCESS");
 				}
 				catch (ParseException e)
 				{
-				    Console.WriteLine("Parse exception " + e.Message);		
+				    Console.WriteLine("FAILED: " + e.Message);		
 				}
 
 				if (dumpStructure)
-				{
-					// TODO: more than one stream
-					for (int i = 0; i < parser.Streams.Count; i++)
-					{
-						SNodeContainer streams = parser.Streams[i].Members;
-						File.WriteAllText(Path.ChangeExtension(fileName, ".structure"), dump(streams, 0));
-					}
-				}
+					SNode.DumpNodes(Path.ChangeExtension(fileName, ".structure"));
+				
 				if (dumpMarket)
 				{
 					for (int i = 0; i < parser.Streams.Count; i++)
@@ -145,7 +109,6 @@
 						File.WriteAllText(Path.ChangeExtension(fileName, ".market"),market(snode));
 					}
 				}
-				Console.WriteLine();
 			}
 			return 1;
 		}

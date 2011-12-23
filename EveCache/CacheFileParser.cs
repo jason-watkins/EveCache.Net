@@ -30,7 +30,7 @@ namespace EveCache
 	using System.Text;
 	using System.IO;
 
-	public class Parser
+	public class CacheFileParser
 	{
 		#region Fields
 		private CacheFileReader _Reader;
@@ -54,7 +54,7 @@ namespace EveCache
 		#endregion Events
 
 		#region Constructors
-		public Parser(CacheFileReader reader)
+		public CacheFileParser(CacheFileReader reader)
 		{
 			Reader = reader;
 			ShareCount = 0;
@@ -411,9 +411,9 @@ namespace EveCache
 					{
 						int len = GetLength();
 						CacheFileReader readerSub = new CacheFileReader(Reader, len);
-						SSubstream ss = new SSubstream(len);
+						SSubStream ss = new SSubStream(len);
 						thisobj = ss;
-						Parser sp = new Parser(readerSub);
+						CacheFileParser sp = new CacheFileParser(readerSub);
 						sp.Parse();
 						for (int i = 0; i < sp.Streams.Count; i++)
 							ss.AddMember(sp.Streams[i].Clone());

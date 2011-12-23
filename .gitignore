@@ -1,6 +1,8 @@
 #    VS Files   #
 #################
 bin/
+bin32/
+bin64/
 obj/
 Debug/
 Release/
