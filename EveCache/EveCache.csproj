@@ -69,7 +69,7 @@
     <Compile Include="MarketParser.cs" />
     <Compile Include="SNodeContainer.cs" />
     <Compile Include="ParseException.cs" />
-    <Compile Include="Parser.cs" />
+    <Compile Include="CacheFileParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SNodes\SNodeDebug.cs" />
     <Compile Include="SNodes\SSubStream.cs" />

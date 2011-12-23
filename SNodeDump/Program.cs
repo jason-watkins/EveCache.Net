@@ -11,23 +11,14 @@
 	{
 		static void Main(string[] args)
 		{
-			//string fileName = "4b51.cache";
-			//string pathName = "../../../TestFiles/" + fileName;
-			foreach (string pathName in Directory.GetFiles("../../../TestFiles/New/"))
+			foreach (string pathName in Directory.GetFiles(@"C:\Users\Jason\AppData\Local\CCP\EVE\d_eve_tranquility\cache\MachoNet\87.237.38.200\302\CachedMethodCalls"))
 			{
 				CacheFileReader cfr;
 				cfr = new CacheFileReader(pathName);
-				Parser parser = new Parser(cfr);
-				//File.WriteAllText("dump.txt", cfr.DumpBuffer());
+				CacheFileParser parser = new CacheFileParser(cfr);
 
-				try
-				{
-					parser.Parse();
-				}
-				catch (ParseException e)
-				{
-					Console.WriteLine("Parse exception " + e.Message);
-				}
+				try { parser.Parse(); }
+				catch (ParseException e) { Console.WriteLine("Parse exception " + e.Message); }
 
 				SNode.DumpNodes(Path.GetFileName(pathName));
 			}

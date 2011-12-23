@@ -117,7 +117,7 @@
 				try { cfr = new CacheFileReader(fileName); }
 				catch (System.IO.FileNotFoundException) { continue; }
 
-				Parser parser = new Parser(cfr);
+				CacheFileParser parser = new CacheFileParser(cfr);
 
 				try
 				{
