@@ -93,20 +93,19 @@ namespace EveCache
 			sb.Append("," + String.Format("{0:0.0}", VolRemaining));
 
 			sb.Append("," + Type);
-			sb.Append("," + Range);
+			sb.Append("," + (ushort)Range);
 			sb.Append("," + OrderID);
 			sb.Append("," + VolEntered);
 			sb.Append("," + MinVolume);
 
 			if (IsBid)
-				sb.Append("True");
+				sb.Append(",True");
 			else
-				sb.Append("False");
+				sb.Append(",False");
 
-			DateTime dt = new DateTime((long)Issued);
-			string dtString = String.Format("0:YYYY-MM-dd HH:mm:ss", dt);
+			DateTime dt = new DateTime(Issued + 504911232000000000);
 
-			sb.Append("," + dt + ".000");
+			sb.Append("," + dt.ToString("yyyy-MM-dd HH:mm:ss") + ".000");
 			sb.Append("," + Duration);
 			sb.Append("," + StationID);
 			sb.Append("," + RegionID);
