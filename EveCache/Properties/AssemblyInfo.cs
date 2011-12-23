@@ -27,9 +27,7 @@ General Public License for more details.
 
 You should have received a copy of the GNU General Public
 License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
-")]
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Black Sun Systems")]
 [assembly: AssemblyProduct("EveCache.Net")]
@@ -55,5 +53,5 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.2.*")]
-[assembly: AssemblyFileVersion("0.2.*")]
+[assembly: AssemblyVersion("0.3.0.*")]
+[assembly: AssemblyFileVersion("0.3.0.*")]
