@@ -37,6 +37,7 @@ Support
 =======
 
 E-mail  : jason at blacksunsystems.net
+IRC     : #eve-dev on irc.coldfont.net
 Code    : http://github.com/jwatkins42/EveCache.Net
 
 libevecache Support Info
