@@ -11,7 +11,7 @@
 		static string market(SNode start)
 		{
 			StringBuilder sb = new StringBuilder();
-			MarketParser mp = new MarketParser(start);
+			MarketOrderParser mp = new MarketOrderParser(start);
 			try
 			{
 				mp.Parse();
@@ -95,7 +95,7 @@
 				}
 				catch (ParseException e)
 				{
-				    Console.WriteLine("FAILED: " + e.Message);		
+				    Console.WriteLine("FAILED: " + e.Message);
 				}
 
 				if (dumpStructure)

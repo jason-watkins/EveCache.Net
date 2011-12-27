@@ -64,9 +64,11 @@
     <Compile Include="ColumnLookup.cs" />
     <Compile Include="EndOfFileException.cs" />
     <Compile Include="EStreamCodeEnum.cs" />
+    <Compile Include="MarketHistory.cs" />
+    <Compile Include="MarketHistoryParser.cs" />
     <Compile Include="MarketList.cs" />
     <Compile Include="MarketOrder.cs" />
-    <Compile Include="MarketParser.cs" />
+    <Compile Include="MarketOrderParser.cs" />
     <Compile Include="SNodeContainer.cs" />
     <Compile Include="ParseException.cs" />
     <Compile Include="CacheFileParser.cs" />

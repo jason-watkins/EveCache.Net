@@ -50,7 +50,7 @@ namespace EveCache
 
 		public override string ToString()
 		{
-			return "<SLongLong '" + Value + "'>";
+			return "<SLong '" + Value + "'>";
 		}
 		#endregion Methods
 	}
