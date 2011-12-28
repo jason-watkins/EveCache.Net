@@ -48,20 +48,20 @@ namespace EveCache
 		#endregion Fields
 
 		#region Properties
-		public virtual long Price { get { return _Price; } set { _Price = value; } }
-		public virtual double VolRemaining { get { return _VolRemaining; } set { _VolRemaining = value; } }
-		public virtual int Range { get { return _Range; } set { _Range = value; } }
-		public virtual long OrderID { get { return _OrderID; } set { _OrderID = value; } }
-		public virtual int VolEntered { get { return _VolEntered; } set { _VolEntered = value; } }
-		public virtual int MinVolume { get { return _MinVolume; } set { _MinVolume = value; } }
-		public virtual bool IsBid { get { return _IsBid; } set { _IsBid = value; } }
-		public virtual long Issued { get { return _Issued; } set { _Issued = value; } }
-		public virtual int Duration { get { return _Duration; } set { _Duration = value; } }
-		public virtual int StationID { get { return _StationID; } set { _StationID = value; } }
-		public virtual int SolarSystemID { get { return _SolarSystemID; } set { _SolarSystemID = value; } }
-		public virtual int RegionID { get { return _RegionID; } set { _RegionID = value; } }
-		public virtual int Jumps { get { return _Jumps; } set { _Jumps = value; } }
-		public virtual int Type { get { return _Type; } set { _Type = value; } }
+		public long Price { get { return _Price; } set { _Price = value; } }
+		public double VolRemaining { get { return _VolRemaining; } set { _VolRemaining = value; } }
+		public int Range { get { return _Range; } set { _Range = value; } }
+		public long OrderID { get { return _OrderID; } set { _OrderID = value; } }
+		public int VolEntered { get { return _VolEntered; } set { _VolEntered = value; } }
+		public int MinVolume { get { return _MinVolume; } set { _MinVolume = value; } }
+		public bool IsBid { get { return _IsBid; } set { _IsBid = value; } }
+		public long Issued { get { return _Issued; } set { _Issued = value; } }
+		public int Duration { get { return _Duration; } set { _Duration = value; } }
+		public int StationID { get { return _StationID; } set { _StationID = value; } }
+		public int SolarSystemID { get { return _SolarSystemID; } set { _SolarSystemID = value; } }
+		public int RegionID { get { return _RegionID; } set { _RegionID = value; } }
+		public int Jumps { get { return _Jumps; } set { _Jumps = value; } }
+		public int Type { get { return _Type; } set { _Type = value; } }
 		#endregion Properties
 
 		#region Constructors

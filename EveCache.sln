@@ -5,6 +5,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EveCache", "EveCache\EveCac
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dumper", "Dumper\Dumper.csproj", "{65129564-41C7-4C5D-B2F5-DE2A4F860F57}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{01A47918-A48F-411E-8BB7-39F768AA9B94}"
+	ProjectSection(SolutionItems) = preProject
+		LICENSE.txt = LICENSE.txt
+		README.txt = README.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +37,7 @@ Global
 		{4FF8C04D-81A0-4352-9AF6-1FC283777626}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
 		{4FF8C04D-81A0-4352-9AF6-1FC283777626}.Debug|Win32.ActiveCfg = Debug|Any CPU
 		{4FF8C04D-81A0-4352-9AF6-1FC283777626}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4FF8C04D-81A0-4352-9AF6-1FC283777626}.Debug|x86.Build.0 = Debug|Any CPU
 		{4FF8C04D-81A0-4352-9AF6-1FC283777626}.Release|Any CPU.ActiveCfg = x64 Release|Any CPU
 		{4FF8C04D-81A0-4352-9AF6-1FC283777626}.Release|Any CPU.Build.0 = x64 Release|Any CPU
 		{4FF8C04D-81A0-4352-9AF6-1FC283777626}.Release|Mixed Platforms.ActiveCfg = x64 Release|Any CPU

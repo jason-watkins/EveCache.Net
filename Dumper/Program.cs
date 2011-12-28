@@ -11,11 +11,11 @@
 		static string market(SNode start)
 		{
 			StringBuilder sb = new StringBuilder();
-			MarketParser mp = new MarketParser(start);
+			MarketOrderParser mp = new MarketOrderParser(start);
 			try
 			{
 				mp.Parse();
-			} 
+			}
 			catch (ParseException e)
 			{
 				sb.Append("Not a valid orders file due to " + e.Message);
@@ -41,6 +41,28 @@
 			{
 				sb.Append(o.ToCsv() + "\n");
 			}
+			return sb.ToString();
+		}
+
+		static string marketHistory(SNode start)
+		{
+			StringBuilder sb = new StringBuilder();
+			MarketHistoryParser mp = new MarketHistoryParser(start);
+			try
+			{
+				mp.Parse();
+			}
+			catch (ParseException e)
+			{
+				sb.Append("Not a valid history file due to " + e.Message);
+				return null;
+			}
+
+			foreach (MarketHistory history in mp.List)
+			{
+				sb.Append(history.ToCsv() + "\n");
+			}
+
 			return sb.ToString();
 		}
 
@@ -95,7 +117,7 @@
 				}
 				catch (ParseException e)
 				{
-				    Console.WriteLine("FAILED: " + e.Message);		
+				    Console.WriteLine("FAILED: " + e.Message);
 				}
 
 				if (dumpStructure)
@@ -106,7 +128,12 @@
 					for (int i = 0; i < parser.Streams.Count; i++)
 					{
 						SNode snode = parser.Streams[i];
-						File.WriteAllText(Path.ChangeExtension(fileName, ".market"),market(snode));
+						string csv = market(snode);
+						if (csv != null && csv.Length > 0)
+							File.WriteAllText(Path.ChangeExtension(fileName, ".market"), csv);
+						csv = marketHistory(snode);
+						if (csv != null && csv.Length > 0)
+							File.WriteAllText(Path.ChangeExtension(fileName, ".history"), csv);
 					}
 				}
 			}

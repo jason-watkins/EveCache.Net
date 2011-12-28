@@ -27,7 +27,7 @@ namespace EveCache
 {
 	using System;
 
-	public class MarketParser
+	public class MarketOrderParser
 	{
 		#region Fields
 		private MarketList _List;
@@ -42,7 +42,7 @@ namespace EveCache
 		#endregion Properties
 
 		#region Constructors
-		public MarketParser(SNode stream)
+		public MarketOrderParser(SNode stream)
 		{
 			List = new MarketList();
 			Stream = new SNodeContainer();
@@ -50,7 +50,7 @@ namespace EveCache
 			Valid = false;
 		}
 
-		public MarketParser(string fileName)
+		public MarketOrderParser(string fileName)
 		{
 			List = new MarketList();
 			try { InitWithFile(fileName); }
