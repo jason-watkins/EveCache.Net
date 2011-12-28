@@ -71,20 +71,6 @@
 			if (type != null)
 				Type = type.Value;
 
-			// Don't need file timestamp. Market histories already have dates
-			/* Try to extract the in-file timestamp */
-			//SDict dict = baseNode.Members[1] as SDict;
-			//if (dict == null)
-			//    throw new ParseException("Can't read file timestamp");
-
-			//// Grab the version entry of the version tuple
-			//SLong time = dict.GetByName("version").Members[0] as SLong;
-			//if (time == null)
-			//    throw new ParseException("Can't read file timestamp");
-
-			//Console.WriteLine("TS: " + time.Value);
-			//List.TimeStamp = new DateTime(time.Value + 504911232000000000);
-
 			if (id.Value == "GetNewPriceHistory")
 				ParseNewHistory(baseNode);
 		}

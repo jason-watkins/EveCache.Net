@@ -48,7 +48,7 @@
 		public virtual string ToCsv()
 		{
 			StringBuilder sb = new StringBuilder();
-			sb.Append(HistoryDate.ToString("yyyy-MM-dd HH:mm:ss") + ".000");
+			sb.Append(HistoryDate.ToString("yyyy-MM-dd"));
 			sb.Append("," + String.Format("{0:0.00}", LowPrice / 10000D));
 			sb.Append("," + String.Format("{0:0.00}", HighPrice / 10000D));
 			sb.Append("," + String.Format("{0:0.00}", AveragePrice / 10000D));
